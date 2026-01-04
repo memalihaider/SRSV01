@@ -91,14 +91,14 @@ export default function AdminStaff() {
       id: 1,
       name: "Mike Johnson",
       role: "Master Barber",
-      email: "mike@premiumcuts.com",
+      email: "mike@manofcave.com",
       phone: "(555) 123-4567",
       rating: 4.9,
       reviews: 247,
       specialties: ["Fades", "Classic Cuts", "Beard Trimming"],
       experience: "8 years",
       status: "active",
-      avatar: "/api/placeholder/100/100",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=500&auto=format&fit=crop",
       schedule: {
         monday: "9AM-7PM",
         tuesday: "9AM-7PM",
@@ -113,14 +113,14 @@ export default function AdminStaff() {
       id: 2,
       name: "Sarah Chen",
       role: "Senior Stylist",
-      email: "sarah@premiumcuts.com",
+      email: "sarah@manofcave.com",
       phone: "(555) 234-5678",
       rating: 4.8,
       reviews: 189,
       specialties: ["Color", "Styling", "Hair Treatments"],
       experience: "6 years",
       status: "active",
-      avatar: "/api/placeholder/100/100",
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=500&auto=format&fit=crop",
       schedule: {
         monday: "10AM-6PM",
         tuesday: "10AM-6PM",
@@ -135,14 +135,14 @@ export default function AdminStaff() {
       id: 3,
       name: "Alex Rodriguez",
       role: "Barber",
-      email: "alex@premiumcuts.com",
+      email: "alex@manofcave.com",
       phone: "(555) 345-6789",
       rating: 4.7,
       reviews: 156,
       specialties: ["Beard Care", "Modern Cuts", "Hot Towel Shave"],
       experience: "5 years",
       status: "active",
-      avatar: "/api/placeholder/100/100",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=500&auto=format&fit=crop",
       schedule: {
         monday: "9AM-7PM",
         tuesday: "9AM-7PM",
@@ -157,14 +157,14 @@ export default function AdminStaff() {
       id: 4,
       name: "Emma Davis",
       role: "Apprentice",
-      email: "emma@premiumcuts.com",
+      email: "emma@manofcave.com",
       phone: "(555) 456-7890",
       rating: 4.5,
       reviews: 23,
       specialties: ["Basic Cuts", "Shampoo"],
       experience: "1 year",
       status: "active",
-      avatar: "/api/placeholder/100/100",
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=500&auto=format&fit=crop",
       schedule: {
         monday: "10AM-4PM",
         tuesday: "10AM-4PM",
@@ -310,7 +310,7 @@ export default function AdminStaff() {
     }
 
     // Handle image upload
-    let avatarUrl = newStaff.avatar || '/api/placeholder/100/100';
+    let avatarUrl = newStaff.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=500&auto=format&fit=crop';
     if (addStaffImageUploadType === 'file' && addStaffImageFile) {
       // In a real app, you'd upload the file to a server and get back a URL
       // For now, we'll create a data URL
@@ -566,9 +566,9 @@ export default function AdminStaff() {
                         Add Staff
                       </Button>
                     </SheetTrigger>
-                    <SheetContent className="w-full sm:max-w-5xl max-h-[100vh] overflow-hidden flex flex-col bg-white border-l-2 border-gray-200 shadow-2xl">
+                    <SheetContent className="w-full sm:max-w-5xl max-h-screen overflow-hidden flex flex-col bg-white border-l-2 border-gray-200 shadow-2xl">
                       {/* Header with better spacing */}
-                      <div className="flex-shrink-0 px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+                      <div className="shrink-0 px-6 py-6 border-b border-gray-100 bg-linear-to-r from-gray-50 to-white">
                         <SheetHeader className="space-y-3">
                           <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -595,7 +595,7 @@ export default function AdminStaff() {
                           <div className="relative">
                             <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                               <div
-                                className="bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full transition-all duration-500 ease-out shadow-sm"
+                                className="bg-linear-to-r from-primary to-primary/80 h-3 rounded-full transition-all duration-500 ease-out shadow-sm"
                                 style={{ width: `${(addStaffCurrentStep / 3) * 100}%` }}
                               ></div>
                             </div>
@@ -633,7 +633,7 @@ export default function AdminStaff() {
 
                             {/* Enhanced Profile Image Section */}
                             <Card className="border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
-                              <CardHeader className="pb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+                              <CardHeader className="pb-6 bg-linear-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
                                     <UserPlus className="w-4 h-4 text-blue-600" />
@@ -646,7 +646,7 @@ export default function AdminStaff() {
                               </CardHeader>
                               <CardContent className="p-6">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                                  <div className="flex-shrink-0">
+                                  <div className="shrink-0">
                                     <Avatar className="w-24 h-24 ring-4 ring-gray-100 shadow-lg">
                                       <AvatarImage
                                         src={addStaffImageUploadType === 'file' && addStaffImageFile
@@ -778,7 +778,7 @@ export default function AdminStaff() {
                                 <Input
                                   id="add-email"
                                   type="email"
-                                  placeholder="staff@premiumcuts.com"
+                                  placeholder="staff@manofcave.com"
                                   value={newStaff.email}
                                   onChange={(e) => setNewStaff({...newStaff, email: e.target.value})}
                                   className={`h-12 border-2 transition-all duration-200 ${
@@ -944,7 +944,7 @@ export default function AdminStaff() {
 
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                               <Card className="border-2 border-gray-100 shadow-sm">
-                                <CardHeader className="pb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100">
+                                <CardHeader className="pb-6 bg-linear-to-r from-green-50 to-emerald-50 border-b border-green-100">
                                   <CardTitle className="text-lg flex items-center gap-2">
                                     <Calendar className="w-5 h-5 text-green-600" />
                                     Weekly Schedule
@@ -954,7 +954,7 @@ export default function AdminStaff() {
                                 <CardContent className="p-6 space-y-4">
                                   {Object.entries(newStaff.schedule).map(([day, hours]) => (
                                     <div key={day} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors duration-200">
-                                      <Label className="w-24 capitalize text-sm font-semibold text-gray-700 flex-shrink-0">{day}:</Label>
+                                      <Label className="w-24 capitalize text-sm font-semibold text-gray-700 shrink-0">{day}:</Label>
                                       <Input
                                         value={hours}
                                         onChange={(e) => updateSchedule(day, e.target.value)}
@@ -1024,7 +1024,7 @@ export default function AdminStaff() {
                       </div>
 
                       {/* Enhanced Navigation Footer */}
-                      <div className="flex-shrink-0 px-6 py-6 border-t-2 border-gray-100 bg-gray-50">
+                      <div className="shrink-0 px-6 py-6 border-t-2 border-gray-100 bg-gray-50">
                         <div className="flex justify-between items-center">
                           <div className="flex gap-3">
                             {addStaffCurrentStep > 1 && (
@@ -1059,7 +1059,7 @@ export default function AdminStaff() {
                             ) : (
                               <Button
                                 onClick={handleAddStaffEnhanced}
-                                className="px-8 py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
+                                className="px-8 py-3 bg-linear-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
                               >
                                 <UserPlus className="w-5 h-5 mr-2" />
                                 Add Staff Member

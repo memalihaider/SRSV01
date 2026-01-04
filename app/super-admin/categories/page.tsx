@@ -460,7 +460,7 @@ export default function SuperAdminCategories() {
         <SheetContent className="w-full sm:max-w-md">
           <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="flex-shrink-0 px-6 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="shrink-0 px-6 py-6 border-b border-gray-200 bg-linear-to-r from-blue-50 to-indigo-50">
               <SheetHeader className="space-y-3">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shadow-sm">
@@ -635,7 +635,7 @@ export default function SuperAdminCategories() {
             </div>
 
             {/* Footer */}
-            <div className="flex-shrink-0 px-6 py-6 border-t border-gray-200 bg-gray-50">
+            <div className="shrink-0 px-6 py-6 border-t border-gray-200 bg-gray-50">
               <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
                 <Button
                   variant="outline"
@@ -664,7 +664,7 @@ export default function SuperAdminCategories() {
         <SheetContent className="w-full sm:max-w-md">
           <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="flex-shrink-0 px-6 py-6 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50">
+            <div className="shrink-0 px-6 py-6 border-b border-gray-200 bg-linear-to-r from-amber-50 to-orange-50">
               <SheetHeader className="space-y-3">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center shadow-sm">
@@ -839,7 +839,7 @@ export default function SuperAdminCategories() {
             </div>
 
             {/* Footer */}
-            <div className="flex-shrink-0 px-6 py-6 border-t border-gray-200 bg-gray-50">
+            <div className="shrink-0 px-6 py-6 border-t border-gray-200 bg-gray-50">
               <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
                 <Button
                   variant="outline"
@@ -868,7 +868,7 @@ export default function SuperAdminCategories() {
         <SheetContent className="w-full sm:max-w-md">
           <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="flex-shrink-0 px-6 py-6 border-b border-gray-200 bg-gradient-to-r from-red-50 to-pink-50">
+            <div className="shrink-0 px-6 py-6 border-b border-gray-200 bg-linear-to-r from-red-50 to-pink-50">
               <SheetHeader className="space-y-3">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center shadow-sm">
@@ -888,7 +888,7 @@ export default function SuperAdminCategories() {
             <div className="flex-1 px-6 py-6">
               <div className="bg-red-50 border border-red-200 rounded-lg p-6">
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
                     <Trash2 className="w-5 h-5 text-red-600" />
                   </div>
                   <div className="flex-1">
@@ -935,7 +935,7 @@ export default function SuperAdminCategories() {
             </div>
 
             {/* Footer */}
-            <div className="flex-shrink-0 px-6 py-6 border-t border-gray-200 bg-gray-50">
+            <div className="shrink-0 px-6 py-6 border-t border-gray-200 bg-gray-50">
               <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
                 <Button
                   variant="outline"

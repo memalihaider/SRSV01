@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +36,8 @@ import {
   FileText,
   Building,
   Settings,
-  Package
+  Package,
+  Info
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -51,6 +53,7 @@ import {
   type LoyaltyProgram,
   type CashbackProgram
 } from "@/stores/membership.store";
+import { useCustomerStore, type LoyaltySettings } from "@/stores/customer.store";
 
 const getOfferTypeLabel = (type: string) => {
   switch (type) {
@@ -99,6 +102,16 @@ export default function AdminMembership() {
     getActivePromoCodes,
   } = useMembershipStore();
 
+  // Customer store for loyalty settings
+  const {
+    loyaltySettings: allLoyaltySettings,
+    addLoyaltySettings,
+    updateLoyaltySettings,
+    deleteLoyaltySettings,
+    getActiveLoyaltySettings,
+    getLoyaltySettingsByBranch,
+  } = useCustomerStore();
+
   // Admin sees data for their branch (assuming branchId from user context)
   // For now, using a mock branch ID - in real app this would come from user context
   const adminBranchId = 'branch1'; // This should come from user.branchId
@@ -107,6 +120,11 @@ export default function AdminMembership() {
   const branchPromoCodes = getPromoCodesByBranch(adminBranchId);
   const branchLoyaltyPrograms = getLoyaltyProgramsByBranch(adminBranchId);
   const branchCashbackPrograms = getCashbackProgramsByBranch(adminBranchId);
+  
+  // Get branch-specific or global loyalty settings
+  const branchLoyaltySettings = getLoyaltySettingsByBranch(adminBranchId);
+  const globalLoyaltySettings = getActiveLoyaltySettings();
+  const currentLoyaltySettings = branchLoyaltySettings || globalLoyaltySettings;
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -117,6 +135,7 @@ export default function AdminMembership() {
   const [loyaltyDialogOpen, setLoyaltyDialogOpen] = useState(false);
   const [cashbackDialogOpen, setCashbackDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [loyaltySettingsDialogOpen, setLoyaltySettingsDialogOpen] = useState(false);
 
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const { getServicesByBranch } = useServicesStore();
@@ -176,6 +195,34 @@ export default function AdminMembership() {
     validTo: '',
     isActive: true
   });
+
+  // Loyalty Settings Form (for customer store settings)
+  const [loyaltySettingsForm, setLoyaltySettingsForm] = useState({
+    pointsPerDollarSpent: currentLoyaltySettings?.pointsPerDollarSpent || 10,
+    pointsValueInDollars: currentLoyaltySettings?.pointsValueInDollars || 0.01,
+    minimumPointsToRedeem: currentLoyaltySettings?.minimumPointsToRedeem || 100,
+    maximumPointsPerTransaction: currentLoyaltySettings?.maximumPointsPerTransaction || 5000,
+    bonusPointsFirstBooking: currentLoyaltySettings?.bonusPointsFirstBooking || 100,
+    bonusPointsOnBirthday: currentLoyaltySettings?.bonusPointsOnBirthday || 200,
+    pointsExpiryDays: currentLoyaltySettings?.pointsExpiryDays || 365,
+    isActive: currentLoyaltySettings?.isActive ?? true,
+  });
+
+  // Update form when settings change
+  useEffect(() => {
+    if (currentLoyaltySettings) {
+      setLoyaltySettingsForm({
+        pointsPerDollarSpent: currentLoyaltySettings.pointsPerDollarSpent,
+        pointsValueInDollars: currentLoyaltySettings.pointsValueInDollars,
+        minimumPointsToRedeem: currentLoyaltySettings.minimumPointsToRedeem,
+        maximumPointsPerTransaction: currentLoyaltySettings.maximumPointsPerTransaction,
+        bonusPointsFirstBooking: currentLoyaltySettings.bonusPointsFirstBooking,
+        bonusPointsOnBirthday: currentLoyaltySettings.bonusPointsOnBirthday,
+        pointsExpiryDays: currentLoyaltySettings.pointsExpiryDays,
+        isActive: currentLoyaltySettings.isActive,
+      });
+    }
+  }, [currentLoyaltySettings]);
 
   const resetForms = () => {
     setOfferForm({
@@ -279,7 +326,7 @@ export default function AdminMembership() {
           applicableItems: [],
           applicableServices: [],
           offerFor: 'single',
-          image: '/api/placeholder/700/400',
+          image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=2070&auto=format&fit=crop',
           validFrom: new Date(),
           validTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
           branchId: adminBranchId,
@@ -294,7 +341,7 @@ export default function AdminMembership() {
           applicableItems: [],
           applicableServices: [],
           offerFor: 'single',
-          image: '/api/placeholder/600/400',
+          image: 'https://images.unsplash.com/photo-1621605815841-aa887ad43639?q=80&w=2070&auto=format&fit=crop',
           validFrom: new Date(),
           validTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
           branchId: adminBranchId,
@@ -309,7 +356,7 @@ export default function AdminMembership() {
           applicableItems: [],
           applicableServices: services.slice(0, 3).map(s => s.id),
           offerFor: 'series',
-          image: '/api/placeholder/800/500',
+          image: 'https://images.unsplash.com/photo-1599351431247-f5094021186d?q=80&w=2070&auto=format&fit=crop',
           validFrom: new Date(),
           validTo: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
           branchId: adminBranchId,
@@ -379,13 +426,19 @@ export default function AdminMembership() {
   const handleAddOffer = () => {
     if (!offerForm.title.trim()) return;
 
-    addOffer({
+    const offerData = {
       ...offerForm,
       validFrom: new Date(offerForm.validFrom),
       validTo: new Date(offerForm.validTo),
       usageLimit: offerForm.usageLimit ? parseInt(offerForm.usageLimit) : undefined,
       branchId: adminBranchId,
-    });
+    };
+
+    if (selectedItem) {
+      updateOffer(selectedItem.id, offerData);
+    } else {
+      addOffer(offerData);
+    }
 
     setOfferDialogOpen(false);
     resetForms();
@@ -434,6 +487,23 @@ export default function AdminMembership() {
 
     setCashbackDialogOpen(false);
     resetForms();
+  };
+
+  const handleSaveLoyaltySettings = () => {
+    if (branchLoyaltySettings) {
+      // Update existing branch settings
+      updateLoyaltySettings(branchLoyaltySettings.id, {
+        ...loyaltySettingsForm,
+        branchId: adminBranchId,
+      });
+    } else {
+      // Create new branch-specific settings
+      addLoyaltySettings({
+        ...loyaltySettingsForm,
+        branchId: adminBranchId,
+      });
+    }
+    setLoyaltySettingsDialogOpen(false);
   };
 
   const openEditDialog = (item: any, type: typeof dialogType) => {
@@ -574,7 +644,7 @@ export default function AdminMembership() {
           {/* Content */}
           <div className="flex-1 overflow-auto p-6">
             <Tabs defaultValue="offers" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+              <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
                 <TabsTrigger value="offers" className="flex items-center gap-2">
                   <Gift className="w-4 h-4" />
                   Offers
@@ -590,6 +660,10 @@ export default function AdminMembership() {
                 <TabsTrigger value="cashback" className="flex items-center gap-2">
                   <DollarSign className="w-4 h-4" />
                   Cashback
+                </TabsTrigger>
+                <TabsTrigger value="loyalty-settings" className="flex items-center gap-2">
+                  <Settings className="w-4 h-4" />
+                  Settings
                 </TabsTrigger>
               </TabsList>
 
@@ -608,84 +682,145 @@ export default function AdminMembership() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {getFilteredOffers().map((offer) => (
-                    <Card key={offer.id} className="hover:shadow-md transition-shadow">
+                    <Card key={offer.id} className="hover:shadow-lg transition-all duration-300 overflow-hidden border-2 border-gray-100 group">
+                      {/* Offer Image */}
+                      <div className="relative h-48 w-full overflow-hidden bg-gray-100">
+                        {offer.image ? (
+                          <Image
+                            src={offer.image}
+                            alt={offer.title}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-full w-full bg-linear-to-br from-blue-50 to-indigo-50">
+                            <Gift className="w-12 h-12 text-blue-200" />
+                          </div>
+                        )}
+                        <div className="absolute top-3 right-3">
+                          <Badge className={cn(
+                            "shadow-sm border-2",
+                            offer.isActive ? "bg-green-500 hover:bg-green-600 border-green-200" : "bg-gray-500 hover:bg-gray-600 border-gray-200"
+                          )}>
+                            {offer.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </div>
+                        <div className="absolute bottom-3 left-3">
+                          <Badge variant="secondary" className="bg-white/90 backdrop-blur-sm text-blue-700 border-blue-100 shadow-sm">
+                            {getOfferTypeLabel(offer.type)}
+                          </Badge>
+                        </div>
+                      </div>
+
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <CardTitle className="text-lg">{offer.title}</CardTitle>
+                            <CardTitle className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                              {offer.title}
+                            </CardTitle>
                             <div className="flex items-center gap-2 mt-2">
-                              <Badge variant={offer.type === 'service' ? 'default' : 'secondary'}>
-                                {getOfferTypeLabel(offer.type)}
-                              </Badge>
                               {offer.offerFor === 'series' && (
-                                <Badge variant="secondary">Series</Badge>
+                                <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
+                                  Series Offer
+                                </Badge>
                               )}
-                              <Badge variant={offer.isActive ? 'default' : 'outline'}>
-                                {offer.isActive ? 'Active' : 'Inactive'}
-                              </Badge>
                             </div>
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" className="hover:bg-gray-100 rounded-full w-8 h-8 p-0">
                                 <MoreVertical className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEditDialog(offer, 'offer')}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onClick={() => openEditDialog(offer, 'offer')} className="cursor-pointer">
+                                <Edit className="w-4 h-4 mr-2 text-blue-600" />
+                                Edit Offer
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => updateOffer(offer.id, { isActive: !offer.isActive })}
+                                className="cursor-pointer"
                               >
                                 {offer.isActive ? (
                                   <>
-                                    <EyeOff className="w-4 h-4 mr-2" />
+                                    <EyeOff className="w-4 h-4 mr-2 text-orange-600" />
                                     Deactivate
                                   </>
                                 ) : (
                                   <>
-                                    <Eye className="w-4 h-4 mr-2" />
+                                    <Eye className="w-4 h-4 mr-2 text-green-600" />
                                     Activate
                                   </>
                                 )}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => openDeleteDialog(offer, 'offer')}
-                                className="text-red-600"
+                                className="text-red-600 cursor-pointer"
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
+                                Delete Offer
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-gray-600 mb-4">{offer.description}</p>
-                        <div className="space-y-2">
-                          {offer.applicableServices && offer.applicableServices.length > 0 && (
-                            <div className="text-sm text-gray-700">
-                              <span className="font-medium">Services:</span> {offer.applicableServices.map(id => services.find(s => s.id === id)?.name || id).join(', ')}
+                        <p className="text-sm text-gray-600 mb-6 line-clamp-2 min-h-[40px]">
+                          {offer.description}
+                        </p>
+                        
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                                <Percent className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <span className="text-sm font-medium text-gray-600">Discount</span>
                             </div>
-                          )}
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Discount:</span>
-                            <span className="font-medium">
+                            <span className="text-lg font-bold text-blue-700">
                               {offer.discountType === 'percentage' ? `${offer.discountValue}%` : `$${offer.discountValue}`}
                             </span>
                           </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Valid until:</span>
-                            <span className="font-medium">
-                              {offer.validTo instanceof Date ? offer.validTo.toLocaleDateString() : new Date(offer.validTo).toLocaleDateString()}
-                            </span>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 bg-orange-50 rounded-xl border border-orange-100">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Calendar className="w-3 h-3 text-orange-600" />
+                                <span className="text-[10px] font-bold text-orange-700 uppercase tracking-wider">Expires</span>
+                              </div>
+                              <p className="text-xs font-semibold text-orange-900">
+                                {offer.validTo instanceof Date ? offer.validTo.toLocaleDateString() : new Date(offer.validTo).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="p-3 bg-purple-50 rounded-xl border border-purple-100">
+                              <div className="flex items-center gap-2 mb-1">
+                                <TrendingUp className="w-3 h-3 text-purple-600" />
+                                <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wider">Usage</span>
+                              </div>
+                              <p className="text-xs font-semibold text-purple-900">
+                                {offer.usedCount}{offer.usageLimit ? ` / ${offer.usageLimit}` : ' (Unlimited)'}
+                              </p>
+                            </div>
                           </div>
-                          {offer.usageLimit && (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">Usage:</span>
-                              <span className="font-medium">{offer.usedCount}/{offer.usageLimit}</span>
+
+                          {offer.applicableServices && offer.applicableServices.length > 0 && (
+                            <div className="pt-2">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Check className="w-3 h-3 text-green-600" />
+                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Applicable Services</span>
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {offer.applicableServices.slice(0, 3).map(id => (
+                                  <Badge key={id} variant="outline" className="text-[10px] py-0 h-5 bg-white">
+                                    {services.find(s => s.id === id)?.name || id}
+                                  </Badge>
+                                ))}
+                                {offer.applicableServices.length > 3 && (
+                                  <Badge variant="outline" className="text-[10px] py-0 h-5 bg-white">
+                                    +{offer.applicableServices.length - 3} more
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -963,6 +1098,162 @@ export default function AdminMembership() {
                   ))}
                 </div>
               </TabsContent>
+
+              {/* Loyalty Settings Tab */}
+              <TabsContent value="loyalty-settings" className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Loyalty Points Settings</h2>
+                    <p className="text-gray-600">Configure how customers earn and redeem loyalty points at your branch</p>
+                  </div>
+                  <Badge variant={currentLoyaltySettings?.isActive ? 'default' : 'secondary'}>
+                    {branchLoyaltySettings ? 'Branch Settings' : 'Using Global Settings'}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Current Settings Card */}
+                  <Card className="border-2 border-yellow-200 bg-yellow-50/50">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Star className="w-5 h-5 text-yellow-600" />
+                        Current Active Settings
+                      </CardTitle>
+                      <CardDescription>
+                        {branchLoyaltySettings 
+                          ? 'Custom settings configured for your branch' 
+                          : 'Using default global settings (customize below)'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-white rounded-lg border">
+                          <p className="text-xs text-gray-500 uppercase tracking-wider">Points per $1 Spent</p>
+                          <p className="text-2xl font-bold text-yellow-600">{currentLoyaltySettings?.pointsPerDollarSpent || 10}</p>
+                        </div>
+                        <div className="p-4 bg-white rounded-lg border">
+                          <p className="text-xs text-gray-500 uppercase tracking-wider">Point Value</p>
+                          <p className="text-2xl font-bold text-green-600">${currentLoyaltySettings?.pointsValueInDollars || 0.01}</p>
+                        </div>
+                        <div className="p-4 bg-white rounded-lg border">
+                          <p className="text-xs text-gray-500 uppercase tracking-wider">Min. to Redeem</p>
+                          <p className="text-2xl font-bold text-blue-600">{currentLoyaltySettings?.minimumPointsToRedeem || 100}</p>
+                        </div>
+                        <div className="p-4 bg-white rounded-lg border">
+                          <p className="text-xs text-gray-500 uppercase tracking-wider">Max per Transaction</p>
+                          <p className="text-2xl font-bold text-purple-600">{currentLoyaltySettings?.maximumPointsPerTransaction || 5000}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                        <div>
+                          <p className="text-sm text-gray-500">First Booking Bonus</p>
+                          <p className="font-semibold text-green-600">+{currentLoyaltySettings?.bonusPointsFirstBooking || 100} pts</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Birthday Bonus</p>
+                          <p className="font-semibold text-pink-600">+{currentLoyaltySettings?.bonusPointsOnBirthday || 200} pts</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Points Expiry</p>
+                          <p className="font-semibold">{currentLoyaltySettings?.pointsExpiryDays || 365} days</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Status</p>
+                          <Badge variant={currentLoyaltySettings?.isActive ? 'default' : 'secondary'}>
+                            {currentLoyaltySettings?.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={() => setLoyaltySettingsDialogOpen(true)} 
+                        className="w-full bg-yellow-600 hover:bg-yellow-700"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        {branchLoyaltySettings ? 'Edit Branch Settings' : 'Create Branch Settings'}
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* How It Works Card */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Info className="w-5 h-5 text-blue-600" />
+                        How Loyalty Points Work
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-green-600 font-bold text-sm">1</span>
+                          </div>
+                          <div>
+                            <p className="font-medium">Customers Earn Points</p>
+                            <p className="text-sm text-gray-600">For every $1 spent, customers earn {currentLoyaltySettings?.pointsPerDollarSpent || 10} loyalty points</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-blue-600 font-bold text-sm">2</span>
+                          </div>
+                          <div>
+                            <p className="font-medium">Points Accumulate in Wallet</p>
+                            <p className="text-sm text-gray-600">Points are stored in the customer&apos;s digital wallet and can be viewed in their portal</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-purple-600 font-bold text-sm">3</span>
+                          </div>
+                          <div>
+                            <p className="font-medium">Redeem for Discounts</p>
+                            <p className="text-sm text-gray-600">{currentLoyaltySettings?.minimumPointsToRedeem || 100} points = ${((currentLoyaltySettings?.minimumPointsToRedeem || 100) * (currentLoyaltySettings?.pointsValueInDollars || 0.01)).toFixed(2)} off their next booking</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-yellow-600 font-bold text-sm">4</span>
+                          </div>
+                          <div>
+                            <p className="font-medium">Bonus Points</p>
+                            <p className="text-sm text-gray-600">New customers get {currentLoyaltySettings?.bonusPointsFirstBooking || 100} bonus points, plus {currentLoyaltySettings?.bonusPointsOnBirthday || 200} on birthdays!</p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Quick Stats */}
+                  <Card className="lg:col-span-2">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-green-600" />
+                        Example Calculations
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <p className="text-sm text-blue-600 font-medium">$50 Haircut</p>
+                          <p className="text-2xl font-bold text-blue-700">+{50 * (currentLoyaltySettings?.pointsPerDollarSpent || 10)} pts</p>
+                          <p className="text-xs text-blue-600">Customer earns</p>
+                        </div>
+                        <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                          <p className="text-sm text-green-600 font-medium">{currentLoyaltySettings?.minimumPointsToRedeem || 100} Points Redeemed</p>
+                          <p className="text-2xl font-bold text-green-700">${((currentLoyaltySettings?.minimumPointsToRedeem || 100) * (currentLoyaltySettings?.pointsValueInDollars || 0.01)).toFixed(2)} off</p>
+                          <p className="text-xs text-green-600">Customer saves</p>
+                        </div>
+                        <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                          <p className="text-sm text-purple-600 font-medium">To Earn $10 Credit</p>
+                          <p className="text-2xl font-bold text-purple-700">${(10 / (currentLoyaltySettings?.pointsValueInDollars || 0.01) / (currentLoyaltySettings?.pointsPerDollarSpent || 10)).toFixed(0)} spent</p>
+                          <p className="text-xs text-purple-600">Customer needs to spend</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
             </Tabs>
           </div>
         </div>
@@ -970,42 +1261,102 @@ export default function AdminMembership() {
         {/* Offer Dialog */}
         <Sheet open={offerDialogOpen} onOpenChange={setOfferDialogOpen}>
           <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-            <SheetHeader className="border-b border-gray-200 pb-6 mb-6">
-              <SheetTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                <Gift className="w-5 h-5 text-blue-600" />
-                Add Special Offer
-              </SheetTitle>
-              <SheetDescription className="text-gray-600">
-                Create a new special offer for your customers with custom discounts and conditions.
-              </SheetDescription>
-            </SheetHeader>
+            <div className="h-32 bg-linear-to-r from-blue-600 to-indigo-700 flex items-end px-8 pb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-xl">
+                  <Gift className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <SheetTitle className="text-2xl font-bold text-white">
+                    {selectedItem ? 'Edit Special Offer' : 'Create New Offer'}
+                  </SheetTitle>
+                  <SheetDescription className="text-blue-100 text-sm">
+                    Configure your promotional offer with custom rules and visuals
+                  </SheetDescription>
+                </div>
+              </div>
+            </div>
 
-            <div className="space-y-8">
+            <div className="p-8 space-y-10">
+              {/* Image Upload Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                  <Upload className="w-4 h-4 text-blue-600" />
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Offer Visuals</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <Label className="text-sm font-medium text-gray-700">Offer Image URL</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={offerForm.image}
+                        onChange={(e) => setOfferForm(prev => ({ ...prev, image: e.target.value }))}
+                        placeholder="https://images.unsplash.com/..."
+                        className="flex-1"
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => setOfferForm(prev => ({ ...prev, image: '' }))}
+                        className="shrink-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-gray-500 italic">
+                      Provide a high-quality image URL to showcase this offer to your customers.
+                    </p>
+                  </div>
+
+                  <div className="relative h-32 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center group">
+                    {offerForm.image ? (
+                      <>
+                        <Image
+                          src={offerForm.image}
+                          alt="Preview"
+                          fill
+                          className="object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white text-xs font-medium">Image Preview</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center p-4">
+                        <Upload className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+                        <p className="text-[10px] text-gray-400 font-medium">No image selected</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Basic Information Section */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-                  <FileText className="w-4 h-4 text-gray-500" />
-                  <h3 className="text-sm font-medium text-gray-900">Basic Information</h3>
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Basic Information</h3>
                 </div>
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <Label htmlFor="offer-title" className="text-sm font-medium text-gray-700">Offer Title</Label>
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="offer-title" className="text-sm font-semibold text-gray-700">Offer Title</Label>
                     <Input
                       id="offer-title"
                       value={offerForm.title}
                       onChange={(e) => setOfferForm(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="e.g., Birthday Special"
-                      className="mt-1"
+                      placeholder="e.g., Summer Haircut Special"
+                      className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="offer-description" className="text-sm font-medium text-gray-700">Description</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="offer-description" className="text-sm font-semibold text-gray-700">Description</Label>
                     <Textarea
                       id="offer-description"
                       value={offerForm.description}
                       onChange={(e) => setOfferForm(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Describe the offer and its benefits"
-                      className="mt-1 min-h-[80px]"
+                      placeholder="Describe the offer and its benefits to attract customers..."
+                      className="min-h-[100px] border-gray-200 focus:border-blue-500 focus:ring-blue-500 resize-none"
                     />
                   </div>
                 </div>
@@ -1014,19 +1365,19 @@ export default function AdminMembership() {
               {/* Offer Configuration Section */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-                  <Settings className="w-4 h-4 text-gray-500" />
-                  <h3 className="text-sm font-medium text-gray-900">Offer Configuration</h3>
+                  <Settings className="w-4 h-4 text-blue-600" />
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Offer Configuration</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="offer-type" className="text-sm font-medium text-gray-700">Offer Type</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="offer-type" className="text-sm font-semibold text-gray-700">Offer Type</Label>
                     <Select
                       value={offerForm.type}
                       onValueChange={(value: 'service' | 'product' | 'combo' | 'birthday' | 'first_time_registration' | 'promotional_package') =>
                         setOfferForm(prev => ({ ...prev, type: value }))
                       }
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="h-11 border-gray-200">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1039,146 +1390,174 @@ export default function AdminMembership() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label htmlFor="offer-discount-type" className="text-sm font-medium text-gray-700">Discount Type</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="offer-discount-type" className="text-sm font-semibold text-gray-700">Discount Type</Label>
                     <Select
                       value={offerForm.discountType}
                       onValueChange={(value: 'percentage' | 'fixed') =>
                         setOfferForm(prev => ({ ...prev, discountType: value }))
                       }
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="h-11 border-gray-200">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="percentage">Percentage Off</SelectItem>
-                        <SelectItem value="fixed">Fixed Amount</SelectItem>
+                        <SelectItem value="percentage">Percentage Off (%)</SelectItem>
+                        <SelectItem value="fixed">Fixed Amount ($)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="offer-discount-value" className="text-sm font-medium text-gray-700">
-                    Discount Value ({offerForm.discountType === 'percentage' ? '%' : '$'})
+                <div className="space-y-2">
+                  <Label htmlFor="offer-discount-value" className="text-sm font-semibold text-gray-700">
+                    Discount Value
                   </Label>
-                  <Input
-                    id="offer-discount-value"
-                    type="number"
-                    value={offerForm.discountValue}
-                    onChange={(e) => setOfferForm(prev => ({ ...prev, discountValue: parseFloat(e.target.value) || 0 }))}
-                    placeholder={offerForm.discountType === 'percentage' ? "20" : "10.00"}
-                    className="mt-1"
-                  />
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">
+                      {offerForm.discountType === 'percentage' ? '%' : '$'}
+                    </div>
+                    <Input
+                      id="offer-discount-value"
+                      type="number"
+                      value={offerForm.discountValue}
+                      onChange={(e) => setOfferForm(prev => ({ ...prev, discountValue: parseFloat(e.target.value) || 0 }))}
+                      placeholder={offerForm.discountType === 'percentage' ? "20" : "10.00"}
+                      className="h-11 pl-8 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Service Selection Section */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-                  <Check className="w-4 h-4 text-gray-500" />
-                  <h3 className="text-sm font-medium text-gray-900">Applicable Services</h3>
+                  <Check className="w-4 h-4 text-blue-600" />
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Applicable Services</h3>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Select Services</Label>
-                  <div className="border border-gray-200 rounded-lg p-4 mt-1 max-h-48 overflow-y-auto bg-gray-50">
-                    <div className="space-y-3">
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-gray-700">Select Services</Label>
+                  <div className="border-2 border-gray-100 rounded-2xl p-4 bg-gray-50/50 max-h-60 overflow-y-auto">
+                    <div className="grid grid-cols-1 gap-2">
                       {services.map((service) => (
-                        <div key={service.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-white transition-colors">
-                          <input
-                            type="checkbox"
-                            id={`service-${service.id}`}
-                            checked={offerForm.applicableServices.includes(service.id)}
-                            onChange={(e) => {
-                              const serviceId = service.id;
-                              setOfferForm(prev => ({
-                                ...prev,
-                                applicableServices: e.target.checked
-                                  ? [...prev.applicableServices, serviceId]
-                                  : prev.applicableServices.filter(id => id !== serviceId)
-                              }));
-                            }}
-                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
-                          />
-                          <Label htmlFor={`service-${service.id}`} className="text-sm cursor-pointer flex-1">
-                            <span className="font-medium text-gray-900">{service.name}</span>
-                            {service.price && (
-                              <span className="text-gray-500 ml-2">(${service.price})</span>
+                        <div 
+                          key={service.id} 
+                          className={cn(
+                            "flex items-center space-x-3 p-3 rounded-xl transition-all cursor-pointer border-2",
+                            offerForm.applicableServices.includes(service.id) 
+                              ? "bg-white border-blue-200 shadow-sm" 
+                              : "bg-transparent border-transparent hover:bg-white/50"
+                          )}
+                          onClick={() => {
+                            const serviceId = service.id;
+                            setOfferForm(prev => ({
+                              ...prev,
+                              applicableServices: prev.applicableServices.includes(serviceId)
+                                ? prev.applicableServices.filter(id => id !== serviceId)
+                                : [...prev.applicableServices, serviceId]
+                            }));
+                          }}
+                        >
+                          <div className={cn(
+                            "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors",
+                            offerForm.applicableServices.includes(service.id)
+                              ? "bg-blue-600 border-blue-600"
+                              : "bg-white border-gray-300"
+                          )}>
+                            {offerForm.applicableServices.includes(service.id) && (
+                              <Check className="w-3 h-3 text-white" />
                             )}
-                          </Label>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-bold text-gray-900">{service.name}</p>
+                            <p className="text-xs text-gray-500">${service.price}</p>
+                          </div>
                         </div>
                       ))}
                     </div>
                     {services.length === 0 && (
-                      <div className="text-center py-8">
-                        <Package className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500">No services available</p>
+                      <div className="text-center py-10">
+                        <Package className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                        <p className="text-sm text-gray-500 font-medium">No services found for this branch</p>
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Select the services this offer applies to. Leave empty to apply to all services.
-                  </p>
+                  <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                    <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                    <p className="text-[11px] text-blue-700 leading-relaxed font-medium">
+                      Select specific services this offer applies to. If none are selected, the offer will be applicable to all services by default.
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* Validity Period Section */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  <h3 className="text-sm font-medium text-gray-900">Validity Period</h3>
+                  <Calendar className="w-4 h-4 text-blue-600" />
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Validity Period</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="offer-valid-from" className="text-sm font-medium text-gray-700">Valid From</Label>
-                    <Input
-                      id="offer-valid-from"
-                      type="date"
-                      value={offerForm.validFrom}
-                      onChange={(e) => setOfferForm(prev => ({ ...prev, validFrom: e.target.value }))}
-                      className="mt-1"
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="offer-valid-from" className="text-sm font-semibold text-gray-700">Valid From</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <Input
+                        id="offer-valid-from"
+                        type="date"
+                        value={offerForm.validFrom}
+                        onChange={(e) => setOfferForm(prev => ({ ...prev, validFrom: e.target.value }))}
+                        className="h-11 pl-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="offer-valid-to" className="text-sm font-medium text-gray-700">Valid To</Label>
-                    <Input
-                      id="offer-valid-to"
-                      type="date"
-                      value={offerForm.validTo}
-                      onChange={(e) => setOfferForm(prev => ({ ...prev, validTo: e.target.value }))}
-                      className="mt-1"
-                    />
+                  <div className="space-y-2">
+                    <Label htmlFor="offer-valid-to" className="text-sm font-semibold text-gray-700">Valid To</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <Input
+                        id="offer-valid-to"
+                        type="date"
+                        value={offerForm.validTo}
+                        onChange={(e) => setOfferForm(prev => ({ ...prev, validTo: e.target.value }))}
+                        className="h-11 pl-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Status Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-                  <Eye className="w-4 h-4 text-gray-500" />
-                  <h3 className="text-sm font-medium text-gray-900">Status</h3>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="offer-active"
-                    checked={offerForm.isActive}
-                    onChange={(e) => setOfferForm(prev => ({ ...prev, isActive: e.target.checked }))}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <Label htmlFor="offer-active" className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Activate this offer immediately
-                  </Label>
+              <div className="p-6 bg-gray-50 rounded-2xl border-2 border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-gray-900">Offer Status</h4>
+                    <p className="text-xs text-gray-500 font-medium">Enable or disable this offer for customers</p>
+                  </div>
+                  <div 
+                    className={cn(
+                      "w-14 h-7 rounded-full p-1 cursor-pointer transition-colors duration-300",
+                      offerForm.isActive ? "bg-blue-600" : "bg-gray-300"
+                    )}
+                    onClick={() => setOfferForm(prev => ({ ...prev, isActive: !prev.isActive }))}
+                  >
+                    <div className={cn(
+                      "w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-300",
+                      offerForm.isActive ? "translate-x-7" : "translate-x-0"
+                    )} />
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-8">
-              <Button variant="outline" onClick={() => setOfferDialogOpen(false)} className="px-6">
+            <div className="sticky bottom-0 bg-white/80 backdrop-blur-md p-6 border-t border-gray-100 flex justify-end space-x-3 z-10">
+              <Button variant="outline" onClick={() => setOfferDialogOpen(false)} className="px-8 h-11 font-semibold border-2">
                 Cancel
               </Button>
-              <Button onClick={handleAddOffer} className="px-6 bg-blue-600 hover:bg-blue-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Offer
+              <Button 
+                onClick={handleAddOffer} 
+                className="px-8 h-11 font-semibold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
+              >
+                {selectedItem ? 'Update Offer' : 'Create Offer'}
               </Button>
             </div>
           </SheetContent>
@@ -1682,6 +2061,220 @@ export default function AdminMembership() {
               </Button>
               <Button variant="destructive" onClick={handleDelete}>
                 Delete
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        {/* Loyalty Settings Dialog */}
+        <Sheet open={loyaltySettingsDialogOpen} onOpenChange={setLoyaltySettingsDialogOpen}>
+          <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+            <SheetHeader className="border-b border-gray-200 pb-6 mb-6">
+              <SheetTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <Settings className="w-5 h-5 text-yellow-600" />
+                {branchLoyaltySettings ? 'Edit Loyalty Settings' : 'Create Branch Loyalty Settings'}
+              </SheetTitle>
+              <SheetDescription className="text-gray-600">
+                Configure how customers earn and redeem loyalty points at your branch. These settings will override global settings.
+              </SheetDescription>
+            </SheetHeader>
+
+            <div className="space-y-8">
+              {/* Points Earning Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                  <Star className="w-4 h-4 text-yellow-500" />
+                  <h3 className="text-sm font-medium text-gray-900">Points Earning</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="settings-points-per-dollar" className="text-sm font-medium text-gray-700">
+                      Points per $1 Spent
+                    </Label>
+                    <Input
+                      id="settings-points-per-dollar"
+                      type="number"
+                      value={loyaltySettingsForm.pointsPerDollarSpent}
+                      onChange={(e) => setLoyaltySettingsForm(prev => ({ 
+                        ...prev, 
+                        pointsPerDollarSpent: parseInt(e.target.value) || 1 
+                      }))}
+                      placeholder="10"
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">How many points customers earn for each $1 spent</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="settings-point-value" className="text-sm font-medium text-gray-700">
+                      Point Value ($)
+                    </Label>
+                    <Input
+                      id="settings-point-value"
+                      type="number"
+                      step="0.001"
+                      value={loyaltySettingsForm.pointsValueInDollars}
+                      onChange={(e) => setLoyaltySettingsForm(prev => ({ 
+                        ...prev, 
+                        pointsValueInDollars: parseFloat(e.target.value) || 0.01 
+                      }))}
+                      placeholder="0.01"
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Dollar value of each point (e.g., 0.01 = 1¢ per point)</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Redemption Rules Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                  <Award className="w-4 h-4 text-blue-500" />
+                  <h3 className="text-sm font-medium text-gray-900">Redemption Rules</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="settings-min-redeem" className="text-sm font-medium text-gray-700">
+                      Minimum Points to Redeem
+                    </Label>
+                    <Input
+                      id="settings-min-redeem"
+                      type="number"
+                      value={loyaltySettingsForm.minimumPointsToRedeem}
+                      onChange={(e) => setLoyaltySettingsForm(prev => ({ 
+                        ...prev, 
+                        minimumPointsToRedeem: parseInt(e.target.value) || 100 
+                      }))}
+                      placeholder="100"
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Minimum points required before redemption</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="settings-max-per-txn" className="text-sm font-medium text-gray-700">
+                      Maximum Points per Transaction
+                    </Label>
+                    <Input
+                      id="settings-max-per-txn"
+                      type="number"
+                      value={loyaltySettingsForm.maximumPointsPerTransaction}
+                      onChange={(e) => setLoyaltySettingsForm(prev => ({ 
+                        ...prev, 
+                        maximumPointsPerTransaction: parseInt(e.target.value) || 5000 
+                      }))}
+                      placeholder="5000"
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Max points redeemable in a single transaction</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bonus Points Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                  <Gift className="w-4 h-4 text-green-500" />
+                  <h3 className="text-sm font-medium text-gray-900">Bonus Points</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="settings-first-booking" className="text-sm font-medium text-gray-700">
+                      First Booking Bonus
+                    </Label>
+                    <Input
+                      id="settings-first-booking"
+                      type="number"
+                      value={loyaltySettingsForm.bonusPointsFirstBooking}
+                      onChange={(e) => setLoyaltySettingsForm(prev => ({ 
+                        ...prev, 
+                        bonusPointsFirstBooking: parseInt(e.target.value) || 0 
+                      }))}
+                      placeholder="100"
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Bonus points for new customer registration</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="settings-birthday" className="text-sm font-medium text-gray-700">
+                      Birthday Bonus
+                    </Label>
+                    <Input
+                      id="settings-birthday"
+                      type="number"
+                      value={loyaltySettingsForm.bonusPointsOnBirthday}
+                      onChange={(e) => setLoyaltySettingsForm(prev => ({ 
+                        ...prev, 
+                        bonusPointsOnBirthday: parseInt(e.target.value) || 0 
+                      }))}
+                      placeholder="200"
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Bonus points awarded on customer&apos;s birthday</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Expiry & Status Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                  <Calendar className="w-4 h-4 text-red-500" />
+                  <h3 className="text-sm font-medium text-gray-900">Expiry & Status</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="settings-expiry" className="text-sm font-medium text-gray-700">
+                      Points Expiry (Days)
+                    </Label>
+                    <Input
+                      id="settings-expiry"
+                      type="number"
+                      value={loyaltySettingsForm.pointsExpiryDays}
+                      onChange={(e) => setLoyaltySettingsForm(prev => ({ 
+                        ...prev, 
+                        pointsExpiryDays: parseInt(e.target.value) || 365 
+                      }))}
+                      placeholder="365"
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Days until points expire (0 = never)</p>
+                  </div>
+                  <div className="flex items-end pb-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="settings-active"
+                        checked={loyaltySettingsForm.isActive}
+                        onChange={(e) => setLoyaltySettingsForm(prev => ({ 
+                          ...prev, 
+                          isActive: e.target.checked 
+                        }))}
+                        className="w-4 h-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                      />
+                      <Label htmlFor="settings-active" className="text-sm font-medium text-gray-700 cursor-pointer">
+                        Enable loyalty points program
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview Section */}
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <h4 className="font-medium text-yellow-800 mb-2">Preview</h4>
+                <div className="text-sm text-yellow-700 space-y-1">
+                  <p>• Customer spends $100 → Earns <strong>{100 * loyaltySettingsForm.pointsPerDollarSpent} points</strong></p>
+                  <p>• {loyaltySettingsForm.minimumPointsToRedeem} points redeemed → <strong>${(loyaltySettingsForm.minimumPointsToRedeem * loyaltySettingsForm.pointsValueInDollars).toFixed(2)} discount</strong></p>
+                  <p>• New customer bonus: <strong>{loyaltySettingsForm.bonusPointsFirstBooking} points</strong> (${(loyaltySettingsForm.bonusPointsFirstBooking * loyaltySettingsForm.pointsValueInDollars).toFixed(2)} value)</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-8">
+              <Button variant="outline" onClick={() => setLoyaltySettingsDialogOpen(false)} className="px-6">
+                Cancel
+              </Button>
+              <Button onClick={handleSaveLoyaltySettings} className="px-6 bg-yellow-600 hover:bg-yellow-700">
+                <Check className="w-4 h-4 mr-2" />
+                Save Settings
               </Button>
             </div>
           </SheetContent>

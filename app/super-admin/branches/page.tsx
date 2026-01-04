@@ -40,7 +40,7 @@ export default function SuperAdminBranches() {
       rating: 4.9,
       status: "active",
       performance: "excellent",
-      image: "/api/placeholder/300/200"
+      image: "https://images.unsplash.com/photo-1596728147529-4acd9626f52e?q=80&w=500&auto=format&fit=crop"
     },
     {
       id: 2,
@@ -54,7 +54,7 @@ export default function SuperAdminBranches() {
       rating: 4.8,
       status: "active",
       performance: "good",
-      image: "/api/placeholder/300/200"
+      image: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=500&auto=format&fit=crop"
     },
     {
       id: 3,
@@ -68,7 +68,7 @@ export default function SuperAdminBranches() {
       rating: 4.9,
       status: "active",
       performance: "excellent",
-      image: "/api/placeholder/300/200"
+      image: "https://images.unsplash.com/photo-1441716844725-09a46eceedbf?q=80&w=500&auto=format&fit=crop"
     },
     {
       id: 4,
@@ -82,7 +82,7 @@ export default function SuperAdminBranches() {
       rating: 4.6,
       status: "active",
       performance: "good",
-      image: "/api/placeholder/300/200"
+      image: "https://images.unsplash.com/photo-1595428774223-ef52624120d2?q=80&w=500&auto=format&fit=crop"
     },
     {
       id: 5,
@@ -96,7 +96,7 @@ export default function SuperAdminBranches() {
       rating: 4.5,
       status: "active",
       performance: "average",
-      image: "/api/placeholder/300/200"
+      image: "https://images.unsplash.com/photo-1596728147529-4acd9626f52e?q=80&w=500&auto=format&fit=crop"
     },
     {
       id: 6,
@@ -110,7 +110,7 @@ export default function SuperAdminBranches() {
       rating: 4.4,
       status: "active",
       performance: "average",
-      image: "/api/placeholder/300/200"
+      image: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=500&auto=format&fit=crop"
     },
     {
       id: 7,
@@ -124,7 +124,7 @@ export default function SuperAdminBranches() {
       rating: 4.3,
       status: "active",
       performance: "needs_attention",
-      image: "/api/placeholder/300/200"
+      image: "https://images.unsplash.com/photo-1596728147529-4acd9626f52e?q=80&w=500&auto=format&fit=crop"
     },
     {
       id: 8,
@@ -138,7 +138,7 @@ export default function SuperAdminBranches() {
       rating: 4.2,
       status: "inactive",
       performance: "needs_attention",
-      image: "/api/placeholder/300/200"
+      image: "https://images.unsplash.com/photo-1441716844725-09a46eceedbf?q=80&w=500&auto=format&fit=crop"
     }
   ];
 

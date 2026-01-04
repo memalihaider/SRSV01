@@ -35,63 +35,103 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary via-primary to-secondary flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
-            <Scissors className="w-8 h-8 text-primary" />
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Premium Background Elements */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-secondary blur-[150px] animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-secondary blur-[150px] animate-pulse"></div>
+      </div>
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.05] pointer-events-none"></div>
+
+      <Card className="w-full max-w-md border-white/5 bg-white/[0.02] backdrop-blur-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-secondary to-transparent"></div>
+        
+        <CardHeader className="text-center pt-12 pb-8">
+          <div className="w-20 h-20 bg-secondary/20 border border-secondary/30 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl">
+            <Scissors className="w-10 h-10 text-secondary" />
           </div>
-          <CardTitle className="text-2xl font-serif text-primary">Premium Cuts Admin</CardTitle>
-          <CardDescription>Sign in to access the admin panel</CardDescription>
+          <CardTitle className="text-3xl font-serif font-bold text-white mb-2">MAN OF<span className="text-secondary">CAVE</span></CardTitle>
+          <CardDescription className="text-gray-400 font-light tracking-widest uppercase text-[10px]">Administrative Concierge</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
+
+        <CardContent className="px-10 pb-12">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-secondary ml-1">Email Address</label>
               <Input
                 type="email"
-                placeholder="Email"
+                placeholder="concierge@manofcave.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full"
+                className="h-14 rounded-2xl border-white/5 bg-white/5 text-white placeholder:text-gray-600 focus:border-secondary focus:ring-secondary transition-all"
                 disabled={isLoading}
               />
             </div>
-            <div className="relative">
-              <Input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pr-10"
-                disabled={isLoading}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+            
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-secondary ml-1">Security Key</label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-14 rounded-2xl border-white/5 bg-white/5 text-white placeholder:text-gray-600 focus:border-secondary focus:ring-secondary transition-all pr-12"
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-secondary transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
+
             {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+              <Alert className="bg-red-500/10 border-red-500/20 text-red-500 rounded-2xl">
+                <AlertDescription className="text-xs font-bold tracking-wide">{error}</AlertDescription>
               </Alert>
             )}
+
             <Button
               type="submit"
-              className="w-full bg-secondary hover:bg-secondary/90 text-primary"
+              className="w-full h-16 bg-secondary hover:bg-white text-primary font-black tracking-[0.2em] text-xs rounded-2xl transition-all duration-500 shadow-xl shadow-secondary/10"
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? 'AUTHENTICATING...' : 'ACCESS PANEL'}
             </Button>
           </form>
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600 mb-2">Demo Credentials:</p>
-            <div className="text-xs text-gray-500 space-y-1">
-              <p><strong>Branch Admin:</strong> admin@branch1.com / admin123</p>
-              <p><strong>Super Admin:</strong> super@premiumcuts.com / super123</p>
+
+          <div className="mt-10 p-6 bg-white/[0.03] border border-white/5 rounded-[2rem]">
+            <p className="text-[9px] font-black text-secondary uppercase tracking-[0.3em] mb-4">Demo Credentials</p>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Branch Admin</span>
+                <span className="text-[10px] text-white font-mono">admin@branch1.com</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Super Admin</span>
+                <span className="text-[10px] text-white font-mono">super@manofcave.com</span>
+              </div>
+              <div className="pt-2 border-t border-white/5 flex justify-between items-center">
+                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Password</span>
+                <span className="text-[10px] text-white font-mono">admin123 / super123</span>
+              </div>
             </div>
+          </div>
+
+          {/* Customer Login Link */}
+          <div className="mt-8 text-center">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="h-px bg-white/10 flex-1"></div>
+              <span className="text-[10px] text-gray-500 uppercase tracking-widest">Customer?</span>
+              <div className="h-px bg-white/10 flex-1"></div>
+            </div>
+            <a href="/customer/login" className="text-secondary hover:text-white font-semibold text-sm transition-colors">
+              → Customer Portal Login
+            </a>
           </div>
         </CardContent>
       </Card>

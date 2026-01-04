@@ -450,7 +450,7 @@ export default function SuperAdminServices() {
           setShowAddServiceDialog(open);
         }}>
           <SheetContent className="w-full sm:max-w-4xl max-h-[98vh] overflow-hidden flex flex-col bg-white border-l-2 border-gray-200 shadow-2xl">
-            <div className="flex-shrink-0 px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="shrink-0 px-6 py-6 border-b border-gray-100 bg-linear-to-r from-blue-50 to-indigo-50">
               <SheetHeader className="space-y-3">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
@@ -596,7 +596,7 @@ export default function SuperAdminServices() {
 
                 {/* Branch Selection */}
                 <Card className="border-2 border-gray-100 shadow-sm">
-                  <CardHeader className="pb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100">
+                  <CardHeader className="pb-6 bg-linear-to-r from-green-50 to-emerald-50 border-b border-green-100">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
                         <Building className="w-4 h-4 text-green-600" />
@@ -657,7 +657,7 @@ export default function SuperAdminServices() {
               </div>
             </div>
 
-            <div className="flex-shrink-0 px-6 py-6 border-t-2 border-gray-100 bg-gray-50">
+            <div className="shrink-0 px-6 py-6 border-t-2 border-gray-100 bg-gray-50">
               <div className="flex justify-between items-center">
                 <Button
                   variant="outline"
@@ -668,7 +668,7 @@ export default function SuperAdminServices() {
                 </Button>
                 <Button
                   onClick={handleSaveService}
-                  className="px-8 py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
+                  className="px-8 py-3 bg-linear-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
                 >
                   <Plus className="w-5 h-5 mr-2" />
                   Add Service

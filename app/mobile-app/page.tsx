@@ -25,11 +25,11 @@ export default function LandingPageCMS() {
 
   // Mock data for CMS content
   const heroSection = {
-    title: "Premium Cuts",
+    title: "Man of Cave",
     subtitle: "Experience luxury grooming at our 8 locations across the city",
     ctaPrimary: "Book Now",
     ctaSecondary: "Find Location",
-    backgroundImage: "/api/placeholder/1920/1080",
+    backgroundImage: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=2070&auto=format&fit=crop",
   };
 
   const testimonials = [
@@ -45,9 +45,9 @@ export default function LandingPageCMS() {
   ];
 
   const seoSettings = {
-    metaTitle: "Premium Cuts - Luxury Barber Shop | Book Online",
-    metaDescription: "Experience premium grooming services at Premium Cuts. Professional barbers, luxury atmosphere, 8 locations across the city.",
-    keywords: "barber, haircuts, beard grooming, luxury salon, premium cuts",
+    metaTitle: "Man of Cave - Luxury Grooming | Book Online",
+    metaDescription: "Experience luxury grooming services at Man of Cave. Professional barbers, luxury atmosphere, 8 locations across the city.",
+    keywords: "barber, haircuts, beard grooming, luxury salon, man of cave",
   };
 
   return (
@@ -75,7 +75,7 @@ export default function LandingPageCMS() {
                 />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">Mobile App Management</h1>
-                  <p className="text-sm text-gray-600">Premium Cuts Mobile App Console</p>
+                  <p className="text-sm text-gray-600">Man of Cave Mobile App Console</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -92,7 +92,7 @@ export default function LandingPageCMS() {
           <main className="flex-1 overflow-y-auto p-4 lg:p-8">
             <div className="max-w-7xl mx-auto">
               <h2>Mobile App Management</h2>
-              <p className="text-gray-600 mt-2">Premium Cuts Mobile App Console</p>
+              <p className="text-gray-600 mt-2">Man of Cave Mobile App Console</p>
             </div>
           </main>
         </div>

@@ -79,7 +79,7 @@ export default function AdminServices() {
       status: "active",
       popularity: "high",
       staff: ["Mike Johnson", "Alex Rodriguez"],
-      image: "/api/placeholder/300/200"
+      image: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=2074&auto=format&fit=crop"
     },
     {
       id: 2,
@@ -91,7 +91,7 @@ export default function AdminServices() {
       status: "active",
       popularity: "high",
       staff: ["Mike Johnson", "Alex Rodriguez"],
-      image: "/api/placeholder/300/200"
+      image: "https://images.unsplash.com/photo-1621605815841-2df4740b0795?q=80&w=2070&auto=format&fit=crop"
     },
     {
       id: 3,
@@ -103,7 +103,7 @@ export default function AdminServices() {
       status: "active",
       popularity: "medium",
       staff: ["Sarah Chen"],
-      image: "/api/placeholder/300/200"
+      image: "https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=2074&auto=format&fit=crop"
     },
     {
       id: 4,
@@ -115,7 +115,7 @@ export default function AdminServices() {
       status: "active",
       popularity: "medium",
       staff: ["Mike Johnson", "Alex Rodriguez"],
-      image: "/api/placeholder/300/200"
+      image: "https://images.unsplash.com/photo-1512690196252-741d2fd35ad0?q=80&w=2070&auto=format&fit=crop"
     },
     {
       id: 5,
@@ -127,7 +127,7 @@ export default function AdminServices() {
       status: "active",
       popularity: "high",
       staff: ["Sarah Chen"],
-      image: "/api/placeholder/300/200"
+      image: "https://images.unsplash.com/photo-1582095133179-bfd08e2fc6b3?q=80&w=2070&auto=format&fit=crop"
     },
     {
       id: 6,
@@ -139,7 +139,7 @@ export default function AdminServices() {
       status: "inactive",
       popularity: "low",
       staff: ["Sarah Chen"],
-      image: "/api/placeholder/300/200"
+      image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=2070&auto=format&fit=crop"
     }
   ]);
 
@@ -229,7 +229,7 @@ export default function AdminServices() {
     }
 
     // Handle image upload
-    const imageUrl = serviceForm.image || '/api/placeholder/300/200';
+    const imageUrl = serviceForm.image || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=2074&auto=format&fit=crop';
     if (serviceImageUploadType === 'file' && serviceImageFile) {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -304,7 +304,7 @@ export default function AdminServices() {
           sidebarOpen ? "lg:ml-0" : "lg:ml-1"
         )}>
           {/* Header */}
-          <header className="bg-white shadow-sm border-b flex-shrink-0">
+          <header className="bg-white shadow-sm border-b shrink-0">
             <div className="flex items-center justify-between px-4 py-4 lg:px-8">
               <div className="flex items-center gap-4">
                 <AdminMobileSidebar role="branch_admin" onLogout={handleLogout}
@@ -427,9 +427,13 @@ export default function AdminServices() {
                   <Card key={service.id}>
                     <div className="aspect-video bg-gray-200 rounded-t-lg overflow-hidden">
                       <img
-                        src={service.image}
+                        src={service.image || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=2074&auto=format&fit=crop'}
                         alt={service.name}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          img.src = 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=2074&auto=format&fit=crop';
+                        }}
                       />
                     </div>
                     <CardHeader>
@@ -543,8 +547,8 @@ export default function AdminServices() {
           if (!open) resetServiceForm();
           setShowAddServiceDialog(open);
         }}>
-          <SheetContent className="w-full sm:max-w-4xl max-h-[100vh] overflow-hidden flex flex-col bg-white border-l-2 border-gray-200 shadow-2xl">
-            <div className="flex-shrink-0 px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <SheetContent className="w-full sm:max-w-4xl max-h-screen overflow-hidden flex flex-col bg-white border-l-2 border-gray-200 shadow-2xl">
+            <div className="shrink-0 px-6 py-6 border-b border-gray-100 bg-linear-to-r from-blue-50 to-indigo-50">
               <SheetHeader className="space-y-3">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -564,7 +568,7 @@ export default function AdminServices() {
               <div className="space-y-8">
                 {/* Service Image Section */}
                 <Card className="border-2 border-gray-100 shadow-sm">
-                  <CardHeader className="pb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100">
+                  <CardHeader className="pb-6 bg-linear-to-r from-green-50 to-emerald-50 border-b border-green-100">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
                         <Upload className="w-4 h-4 text-green-600" />
@@ -577,12 +581,12 @@ export default function AdminServices() {
                   </CardHeader>
                   <CardContent className="p-6">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         <div className="w-32 h-24 rounded-lg bg-gray-200 border-2 border-gray-300 overflow-hidden">
                           <img
                             src={serviceImageUploadType === 'file' && serviceImageFile
                               ? URL.createObjectURL(serviceImageFile)
-                              : serviceForm.image || '/api/placeholder/300/200'}
+                              : serviceForm.image || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=2074&auto=format&fit=crop'}
                             alt="Service preview"
                             className="w-full h-full object-cover"
                           />
@@ -813,7 +817,7 @@ export default function AdminServices() {
               </div>
             </div>
 
-            <div className="flex-shrink-0 px-6 py-6 border-t-2 border-gray-100 bg-gray-50">
+            <div className="shrink-0 px-6 py-6 border-t-2 border-gray-100 bg-gray-50">
               <div className="flex justify-between items-center">
                 <Button
                   variant="outline"
@@ -824,7 +828,7 @@ export default function AdminServices() {
                 </Button>
                 <Button
                   onClick={handleSaveService}
-                  className="px-8 py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
+                  className="px-8 py-3 bg-linear-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
                 >
                   <Plus className="w-5 h-5 mr-2" />
                   Add Service
@@ -840,7 +844,7 @@ export default function AdminServices() {
           setShowEditServiceDialog(open);
         }}>
           <SheetContent className="w-full sm:max-w-4xl max-h-[98vh] overflow-hidden flex flex-col bg-white border-l-2 border-gray-200 shadow-2xl">
-            <div className="flex-shrink-0 px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-amber-50 to-orange-50">
+            <div className="shrink-0 px-6 py-6 border-b border-gray-100 bg-linear-to-r from-amber-50 to-orange-50">
               <SheetHeader className="space-y-3">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
@@ -860,7 +864,7 @@ export default function AdminServices() {
               <div className="space-y-8">
                 {/* Service Image Section */}
                 <Card className="border-2 border-gray-100 shadow-sm">
-                  <CardHeader className="pb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100">
+                  <CardHeader className="pb-6 bg-linear-to-r from-green-50 to-emerald-50 border-b border-green-100">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
                         <Upload className="w-4 h-4 text-green-600" />
@@ -873,12 +877,12 @@ export default function AdminServices() {
                   </CardHeader>
                   <CardContent className="p-6">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         <div className="w-32 h-24 rounded-lg bg-gray-200 border-2 border-gray-300 overflow-hidden">
                           <img
                             src={serviceImageUploadType === 'file' && serviceImageFile
                               ? URL.createObjectURL(serviceImageFile)
-                              : serviceForm.image || '/api/placeholder/300/200'}
+                              : serviceForm.image || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=2074&auto=format&fit=crop'}
                             alt="Service preview"
                             className="w-full h-full object-cover"
                           />
@@ -1101,7 +1105,7 @@ export default function AdminServices() {
               </div>
             </div>
 
-            <div className="flex-shrink-0 px-6 py-6 border-t-2 border-gray-100 bg-gray-50">
+            <div className="shrink-0 px-6 py-6 border-t-2 border-gray-100 bg-gray-50">
               <div className="flex justify-between items-center">
                 <Button
                   variant="outline"
@@ -1112,7 +1116,7 @@ export default function AdminServices() {
                 </Button>
                 <Button
                   onClick={handleSaveService}
-                  className="px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
+                  className="px-8 py-3 bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
                 >
                   <Edit className="w-5 h-5 mr-2" />
                   Update Service
@@ -1125,7 +1129,7 @@ export default function AdminServices() {
         {/* Analytics Sheet */}
         <Sheet open={showAnalyticsDialog} onOpenChange={setShowAnalyticsDialog}>
           <SheetContent className="w-full sm:max-w-5xl max-h-[98vh] overflow-hidden flex flex-col bg-white border-l-2 border-gray-200 shadow-2xl">
-            <div className="flex-shrink-0 px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="shrink-0 px-6 py-6 border-b border-gray-100 bg-linear-to-r from-blue-50 to-indigo-50">
               <SheetHeader className="space-y-3">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
@@ -1278,7 +1282,7 @@ export default function AdminServices() {
                       { name: "James Wilson", rating: 5, comment: "Outstanding work! The attention to detail is amazing.", date: "3 weeks ago" }
                     ].map((review, index) => (
                       <div key={index} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center shrink-0">
                           <User className="w-5 h-5 text-gray-600" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1314,7 +1318,7 @@ export default function AdminServices() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex items-start gap-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
                         <TrendingUp className="w-4 h-4 text-green-600" />
                       </div>
                       <div>
@@ -1324,7 +1328,7 @@ export default function AdminServices() {
                     </div>
 
                     <div className="flex items-start gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
                         <div className="w-4 h-4 rounded-lg bg-blue-200 flex items-center justify-center">
                           <DollarSign className="w-3 h-3 text-blue-600" />
                         </div>
@@ -1336,7 +1340,7 @@ export default function AdminServices() {
                     </div>
 
                     <div className="flex items-start gap-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
                         <Clock className="w-4 h-4 text-amber-600" />
                       </div>
                       <div>
@@ -1349,11 +1353,11 @@ export default function AdminServices() {
               </Card>
             </div>
 
-            <div className="flex-shrink-0 px-6 py-6 border-t-2 border-gray-100 bg-gray-50">
+            <div className="shrink-0 px-6 py-6 border-t-2 border-gray-100 bg-gray-50">
               <div className="flex justify-end">
                 <Button
                   onClick={() => setShowAnalyticsDialog(false)}
-                  className="px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
+                  className="px-8 py-3 bg-linear-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
                 >
                   <BarChart3 className="w-5 h-5 mr-2" />
                   Close Analytics
@@ -1372,7 +1376,7 @@ export default function AdminServices() {
           setShowScheduleDialog(open);
         }}>
           <SheetContent className="w-full sm:max-w-4xl max-h-[98vh] overflow-hidden flex flex-col bg-white border-l-2 border-gray-200 shadow-2xl">
-            <div className="flex-shrink-0 px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="shrink-0 px-6 py-6 border-b border-gray-100 bg-linear-to-r from-blue-50 to-indigo-50">
               <SheetHeader className="space-y-3">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
@@ -1526,7 +1530,7 @@ export default function AdminServices() {
               </div>
             </div>
 
-            <div className="flex-shrink-0 px-6 py-6 border-t-2 border-gray-100 bg-gray-50">
+            <div className="shrink-0 px-6 py-6 border-t-2 border-gray-100 bg-gray-50">
               <div className="flex justify-between items-center">
                 <Button
                   variant="outline"
@@ -1541,7 +1545,7 @@ export default function AdminServices() {
                     alert('Schedule updated successfully!');
                     setShowScheduleDialog(false);
                   }}
-                  className="px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
+                  className="px-8 py-3 bg-linear-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
                 >
                   <Save className="w-5 h-5 mr-2" />
                   Save Schedule
@@ -1561,7 +1565,7 @@ export default function AdminServices() {
           setShowPriceHistoryDialog(open);
         }}>
           <SheetContent className="w-full sm:max-w-4xl max-h-[98vh] overflow-hidden flex flex-col bg-white border-l-2 border-gray-200 shadow-2xl">
-            <div className="flex-shrink-0 px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
+            <div className="shrink-0 px-6 py-6 border-b border-gray-100 bg-linear-to-r from-green-50 to-emerald-50">
               <SheetHeader className="space-y-3">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
@@ -1622,7 +1626,7 @@ export default function AdminServices() {
                         { date: 'Jan 1, 2023', price: 31.25, change: '0%', reason: 'Initial pricing', type: 'initial' }
                       ].map((entry, index) => (
                         <div key={index} className="flex items-start gap-4 pb-6 last:pb-0">
-                          <div className="flex-shrink-0">
+                          <div className="shrink-0">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                               entry.type === 'increase' ? 'bg-red-100' :
                               entry.type === 'decrease' ? 'bg-green-100' : 'bg-blue-100'
@@ -1738,7 +1742,7 @@ export default function AdminServices() {
               </div>
             </div>
 
-            <div className="flex-shrink-0 px-6 py-6 border-t-2 border-gray-100 bg-gray-50">
+            <div className="shrink-0 px-6 py-6 border-t-2 border-gray-100 bg-gray-50">
               <div className="flex justify-between items-center">
                 <Button
                   variant="outline"
@@ -1761,7 +1765,7 @@ export default function AdminServices() {
                       alert('Price updated successfully!');
                       setShowPriceHistoryDialog(false);
                     }}
-                    className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
+                    className="px-8 py-3 bg-linear-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
                   >
                     <Save className="w-5 h-5 mr-2" />
                     Update Price

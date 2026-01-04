@@ -106,8 +106,8 @@ export default function AdminProducts() {
       status: "active",
       rating: 4.8,
       reviews: 127,
-      image: "/api/placeholder/300/200",
-      brand: "Premium Cuts"
+      image: "https://images.unsplash.com/photo-1584305650560-5198c489fe47?q=80&w=2070&auto=format&fit=crop",
+      brand: "Man of Cave"
     },
     {
       id: 2,
@@ -120,8 +120,8 @@ export default function AdminProducts() {
       status: "active",
       rating: 4.6,
       reviews: 89,
-      image: "/api/placeholder/300/200",
-      brand: "Premium Cuts"
+      image: "https://images.unsplash.com/photo-1626285861696-9f0bf5a49c6d?q=80&w=2070&auto=format&fit=crop",
+      brand: "Man of Cave"
     },
     {
       id: 3,
@@ -134,8 +134,8 @@ export default function AdminProducts() {
       status: "active",
       rating: 4.7,
       reviews: 156,
-      image: "/api/placeholder/300/200",
-      brand: "Premium Cuts"
+      image: "https://images.unsplash.com/photo-1597354984706-fac992d9306f?q=80&w=2070&auto=format&fit=crop",
+      brand: "Man of Cave"
     },
     {
       id: 4,
@@ -148,8 +148,8 @@ export default function AdminProducts() {
       status: "low-stock",
       rating: 4.9,
       reviews: 203,
-      image: "/api/placeholder/300/200",
-      brand: "Premium Cuts"
+      image: "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?q=80&w=2070&auto=format&fit=crop",
+      brand: "Man of Cave"
     },
     {
       id: 5,
@@ -162,7 +162,7 @@ export default function AdminProducts() {
       status: "active",
       rating: 4.5,
       reviews: 67,
-      image: "/api/placeholder/300/200",
+      image: "https://images.unsplash.com/photo-1592647420148-bfcc1a3ed291?q=80&w=2070&auto=format&fit=crop",
       brand: "Wahl"
     },
     {
@@ -176,8 +176,8 @@ export default function AdminProducts() {
       status: "out-of-stock",
       rating: 4.4,
       reviews: 45,
-      image: "/api/placeholder/300/200",
-      brand: "Premium Cuts"
+      image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=2070&auto=format&fit=crop",
+      brand: "Man of Cave"
     }
   ]);
 
@@ -266,7 +266,7 @@ export default function AdminProducts() {
     }
 
     // Handle image upload
-    const imageUrl = productForm.image || '/api/placeholder/300/200';
+    const imageUrl = productForm.image || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=2074&auto=format&fit=crop';
     if (productImageUploadType === 'file' && productImageFile) {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -606,8 +606,8 @@ export default function AdminProducts() {
         if (!open) resetProductForm();
         setShowAddProductDialog(open);
       }}>
-        <SheetContent className="w-full sm:max-w-4xl max-h-[100vh] overflow-hidden flex flex-col bg-white border-l-2 border-gray-200 shadow-2xl">
-          <div className="flex-shrink-0 px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
+        <SheetContent className="w-full sm:max-w-4xl max-h-screen overflow-hidden flex flex-col bg-white border-l-2 border-gray-200 shadow-2xl">
+          <div className="shrink-0 px-6 py-6 border-b border-gray-100 bg-linear-to-r from-green-50 to-emerald-50">
             <SheetHeader className="space-y-3">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
@@ -828,7 +828,7 @@ export default function AdminProducts() {
             </div>
           </div>
 
-          <div className="flex-shrink-0 px-6 py-4 border-t border-gray-100 bg-gray-50">
+          <div className="shrink-0 px-6 py-4 border-t border-gray-100 bg-gray-50">
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
@@ -840,7 +840,7 @@ export default function AdminProducts() {
               </Button>
               <Button
                 onClick={handleSaveProduct}
-                className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
+                className="px-8 py-3 bg-linear-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
               >
                 <Plus className="w-5 h-5 mr-2" />
                 Add Product
@@ -856,7 +856,7 @@ export default function AdminProducts() {
         setShowEditProductDialog(open);
       }}>
         <SheetContent className="w-full sm:max-w-4xl max-h-[98vh] overflow-hidden flex flex-col bg-white border-l-2 border-gray-200 shadow-2xl">
-          <div className="flex-shrink-0 px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-amber-50 to-orange-50">
+          <div className="shrink-0 px-6 py-6 border-b border-gray-100 bg-linear-to-r from-amber-50 to-orange-50">
             <SheetHeader className="space-y-3">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
@@ -1077,7 +1077,7 @@ export default function AdminProducts() {
             </div>
           </div>
 
-          <div className="flex-shrink-0 px-6 py-4 border-t border-gray-100 bg-gray-50">
+          <div className="shrink-0 px-6 py-4 border-t border-gray-100 bg-gray-50">
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
@@ -1089,7 +1089,7 @@ export default function AdminProducts() {
               </Button>
               <Button
                 onClick={handleSaveProduct}
-                className="px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
+                className="px-8 py-3 bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
               >
                 <Edit className="w-5 h-5 mr-2" />
                 Update Product
@@ -1102,7 +1102,7 @@ export default function AdminProducts() {
       {/* Update Stock Sheet */}
       <Sheet open={showUpdateStockDialog} onOpenChange={setShowUpdateStockDialog}>
         <SheetContent className="w-full sm:max-w-2xl max-h-[98vh] overflow-hidden flex flex-col bg-white border-l-2 border-gray-200 shadow-2xl">
-          <div className="flex-shrink-0 px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="shrink-0 px-6 py-6 border-b border-gray-100 bg-linear-to-r from-blue-50 to-indigo-50">
             <SheetHeader className="space-y-3">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
@@ -1222,7 +1222,7 @@ export default function AdminProducts() {
             </div>
           </div>
 
-          <div className="flex-shrink-0 px-6 py-4 border-t border-gray-100 bg-gray-50">
+          <div className="shrink-0 px-6 py-4 border-t border-gray-100 bg-gray-50">
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
@@ -1234,7 +1234,7 @@ export default function AdminProducts() {
               </Button>
               <Button
                 onClick={handleUpdateStock}
-                className="px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
+                className="px-8 py-3 bg-linear-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
               >
                 <Package className="w-5 h-5 mr-2" />
                 Update Stock
@@ -1247,7 +1247,7 @@ export default function AdminProducts() {
       {/* Analytics Sheet */}
       <Sheet open={showAnalyticsDialog} onOpenChange={setShowAnalyticsDialog}>
         <SheetContent className="w-full sm:max-w-4xl max-h-[98vh] overflow-hidden flex flex-col bg-white border-l-2 border-gray-200 shadow-2xl">
-          <div className="flex-shrink-0 px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-pink-50">
+          <div className="shrink-0 px-6 py-6 border-b border-gray-100 bg-linear-to-r from-purple-50 to-pink-50">
             <SheetHeader className="space-y-3">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
@@ -1379,11 +1379,11 @@ export default function AdminProducts() {
             </div>
           </div>
 
-          <div className="flex-shrink-0 px-6 py-4 border-t border-gray-100 bg-gray-50">
+          <div className="shrink-0 px-6 py-4 border-t border-gray-100 bg-gray-50">
             <div className="flex justify-end gap-3">
               <Button
                 onClick={() => setShowAnalyticsDialog(false)}
-                className="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
+                className="px-8 py-3 bg-linear-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
               >
                 <X className="w-5 h-5 mr-2" />
                 Close Analytics

@@ -619,7 +619,7 @@ export default function SuperAdminMembership() {
           applicableItems: [],
           applicableServices: services.slice(0, 3).map(s => s.id),
           offerFor: 'series',
-          image: '/api/placeholder/800/400',
+          image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=2070&auto=format&fit=crop',
           validFrom: new Date(),
           validTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           branchId: undefined, // Global
@@ -635,7 +635,7 @@ export default function SuperAdminMembership() {
           applicableItems: [],
           applicableServices: [],
           offerFor: 'single',
-          image: '/api/placeholder/700/400',
+          image: 'https://images.unsplash.com/photo-1621605815841-aa887ad43639?q=80&w=2070&auto=format&fit=crop',
           validFrom: new Date(),
           validTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
           branchId: undefined, // Global
@@ -651,7 +651,7 @@ export default function SuperAdminMembership() {
           applicableItems: [],
           applicableServices: [],
           offerFor: 'single',
-          image: '/api/placeholder/600/400',
+          image: 'https://images.unsplash.com/photo-1599351431247-f5094021186d?q=80&w=2070&auto=format&fit=crop',
           validFrom: new Date(),
           validTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
           branchId: undefined, // Global
@@ -667,7 +667,7 @@ export default function SuperAdminMembership() {
           applicableItems: [],
           applicableServices: services.slice(0, 4).map(s => s.id),
           offerFor: 'series',
-          image: '/api/placeholder/800/500',
+          image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=2070&auto=format&fit=crop',
           validFrom: new Date(),
           validTo: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
           branchId: undefined, // Global
@@ -683,7 +683,7 @@ export default function SuperAdminMembership() {
           applicableItems: [],
           applicableServices: [services[0].id, services[1].id],
           offerFor: 'single',
-          image: '/api/placeholder/600/400',
+          image: 'https://images.unsplash.com/photo-1599351431247-f5094021186d?q=80&w=2070&auto=format&fit=crop',
           validFrom: new Date(),
           validTo: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
           branchId: 'branch1',

@@ -35,7 +35,7 @@ export default function SuperAdminStaff() {
       name: "Mike Johnson",
       role: "Master Barber",
       branch: "Downtown Premium",
-      email: "mike@premiumcuts.com",
+      email: "mike@manofcave.com",
       phone: "(555) 123-4567",
       rating: 4.9,
       reviews: 247,
@@ -43,14 +43,14 @@ export default function SuperAdminStaff() {
       status: "active",
       hireDate: "2017-03-15",
       salary: 45000,
-      avatar: "/api/placeholder/100/100"
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=500&auto=format&fit=crop"
     },
     {
       id: 2,
       name: "Sarah Chen",
       role: "Stylist",
       branch: "Midtown Elite",
-      email: "sarah@premiumcuts.com",
+      email: "sarah@manofcave.com",
       phone: "(555) 234-5678",
       rating: 4.8,
       reviews: 189,
@@ -58,14 +58,14 @@ export default function SuperAdminStaff() {
       status: "active",
       hireDate: "2019-07-22",
       salary: 38000,
-      avatar: "/api/placeholder/100/100"
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=500&auto=format&fit=crop"
     },
     {
       id: 3,
       name: "Alex Rodriguez",
       role: "Barber",
       branch: "Uptown Luxury",
-      email: "alex@premiumcuts.com",
+      email: "alex@manofcave.com",
       phone: "(555) 345-6789",
       rating: 4.7,
       reviews: 156,
@@ -73,14 +73,14 @@ export default function SuperAdminStaff() {
       status: "active",
       hireDate: "2020-01-10",
       salary: 35000,
-      avatar: "/api/placeholder/100/100"
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=500&auto=format&fit=crop"
     },
     {
       id: 4,
       name: "Emma Davis",
       role: "Apprentice",
       branch: "Suburban Comfort",
-      email: "emma@premiumcuts.com",
+      email: "emma@manofcave.com",
       phone: "(555) 456-7890",
       rating: 4.5,
       reviews: 23,
@@ -88,14 +88,14 @@ export default function SuperAdminStaff() {
       status: "active",
       hireDate: "2024-06-01",
       salary: 25000,
-      avatar: "/api/placeholder/100/100"
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=500&auto=format&fit=crop"
     },
     {
       id: 5,
       name: "John Smith",
       role: "Barber",
       branch: "Westside Modern",
-      email: "john@premiumcuts.com",
+      email: "john@manofcave.com",
       phone: "(555) 567-8901",
       rating: 4.6,
       reviews: 134,
@@ -103,14 +103,14 @@ export default function SuperAdminStaff() {
       status: "active",
       hireDate: "2021-04-15",
       salary: 32000,
-      avatar: "/api/placeholder/100/100"
+      avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=500&auto=format&fit=crop"
     },
     {
       id: 6,
       name: "Lisa Brown",
       role: "Stylist",
       branch: "Eastside Classic",
-      email: "lisa@premiumcuts.com",
+      email: "lisa@manofcave.com",
       phone: "(555) 678-9012",
       rating: 4.7,
       reviews: 178,
@@ -118,14 +118,14 @@ export default function SuperAdminStaff() {
       status: "active",
       hireDate: "2018-09-30",
       salary: 40000,
-      avatar: "/api/placeholder/100/100"
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=500&auto=format&fit=crop"
     },
     {
       id: 7,
       name: "Tom Wilson",
       role: "Barber",
       branch: "Northgate Plaza",
-      email: "tom@premiumcuts.com",
+      email: "tom@manofcave.com",
       phone: "(555) 789-0123",
       rating: 4.3,
       reviews: 67,
@@ -133,14 +133,14 @@ export default function SuperAdminStaff() {
       status: "active",
       hireDate: "2022-02-20",
       salary: 30000,
-      avatar: "/api/placeholder/100/100"
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=500&auto=format&fit=crop"
     },
     {
       id: 8,
       name: "Maria Garcia",
       role: "Apprentice",
       branch: "Southpoint Mall",
-      email: "maria@premiumcuts.com",
+      email: "maria@manofcave.com",
       phone: "(555) 890-1234",
       rating: 4.1,
       reviews: 12,
@@ -148,7 +148,7 @@ export default function SuperAdminStaff() {
       status: "inactive",
       hireDate: "2024-09-15",
       salary: 22000,
-      avatar: "/api/placeholder/100/100"
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=500&auto=format&fit=crop"
     }
   ];
 
@@ -187,7 +187,7 @@ export default function SuperAdminStaff() {
           sidebarOpen ? "lg:ml-64" : "lg:ml-16"
         )}>
           {/* Header */}
-          <header className="bg-white shadow-sm border-b flex-shrink-0">
+          <header className="bg-white shadow-sm border-b shrink-0">
             <div className="flex items-center justify-between px-4 py-4 lg:px-8">
               <div className="flex items-center gap-4">
                 <AdminMobileSidebar role="super_admin" onLogout={handleLogout}

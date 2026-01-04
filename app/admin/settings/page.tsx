@@ -31,11 +31,11 @@ export default function AdminSettings() {
 
   const [settings, setSettings] = useState({
     // Business Settings
-    businessName: "Premium Cuts Downtown",
-    businessEmail: "downtown@premiumcuts.com",
+    businessName: "Man of Cave Downtown",
+    businessEmail: "downtown@manofcave.com",
     businessPhone: "(555) 123-4567",
     businessAddress: "123 Main Street, Downtown, NY 10001",
-    businessDescription: "Premium barber shop offering traditional and modern cuts with expert stylists.",
+    businessDescription: "Man of Cave offering traditional and modern grooming with expert stylists.",
     timezone: "America/New_York",
 
     // Operating Hours

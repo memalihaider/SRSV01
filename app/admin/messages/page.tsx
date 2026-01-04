@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   MessageCircle,
   Send,
@@ -17,7 +18,9 @@ import {
   Search,
   MoreVertical,
   Check,
-  CheckCheck
+  CheckCheck,
+  Star,
+  Trash2
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AdminSidebar, AdminMobileSidebar } from "@/components/admin/AdminSidebar";
@@ -29,11 +32,40 @@ import { CurrencySwitcher } from "@/components/ui/currency-switcher";
 import { formatDistanceToNow } from "date-fns";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 
+interface Feedback {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  serviceOrProduct: string;
+  rating: number;
+  comment: string;
+  branchId: string;
+  type: 'service' | 'product';
+  createdAt: Date;
+  status: 'approved' | 'pending' | 'rejected';
+  replies: FeedbackReply[];
+}
+
+interface FeedbackReply {
+  id: string;
+  text: string;
+  author: string;
+  createdAt: Date;
+}
+
 export default function AdminMessages() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [newMessage, setNewMessage] = useState('');
+  const [viewMode, setViewMode] = useState<'messages' | 'feedbacks'>('messages');
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [newFeedbackRating, setNewFeedbackRating] = useState(5);
+  const [newFeedbackComment, setNewFeedbackComment] = useState('');
+  const [newFeedbackService, setNewFeedbackService] = useState('');
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -135,6 +167,84 @@ export default function AdminMessages() {
       store.setConversations(mockConversations);
       mockMessages.forEach(msg => store.addMessage(msg));
     }
+
+    // Set mock feedbacks for branch
+    const mockFeedbacks: Feedback[] = [
+      {
+        id: 'fb-1',
+        customerName: 'Sarah Wilson',
+        customerEmail: 'sarah@example.com',
+        serviceOrProduct: 'Hair Spa Treatment',
+        rating: 5,
+        comment: 'Excellent service! Very relaxing and professional staff.',
+        branchId: 'branch1',
+        type: 'service',
+        createdAt: new Date('2025-12-01T10:00:00'),
+        status: 'approved',
+        replies: [
+          {
+            id: 'reply-1',
+            text: 'Thank you Sarah! We appreciate your kind words and look forward to seeing you again.',
+            author: 'Admin',
+            createdAt: new Date('2025-12-01T11:00:00')
+          }
+        ]
+      },
+      {
+        id: 'fb-2',
+        customerName: 'Michael Brown',
+        customerEmail: 'michael@example.com',
+        serviceOrProduct: 'Premium Face Pack',
+        rating: 4,
+        comment: 'Great results, will definitely come back.',
+        branchId: 'branch1',
+        type: 'product',
+        createdAt: new Date('2025-11-30T15:30:00'),
+        status: 'approved',
+        replies: []
+      },
+      {
+        id: 'fb-3',
+        customerName: 'Emma Davis',
+        customerEmail: 'emma@example.com',
+        serviceOrProduct: 'Manicure Service',
+        rating: 3,
+        comment: 'Good but could improve on the finishing.',
+        branchId: 'branch1',
+        type: 'service',
+        createdAt: new Date('2025-11-29T12:00:00'),
+        status: 'pending',
+        replies: []
+      },
+      {
+        id: 'fb-4',
+        customerName: 'Lisa Anderson',
+        customerEmail: 'lisa@example.com',
+        serviceOrProduct: 'Organic Shampoo',
+        rating: 5,
+        comment: 'Best shampoo I have used for my hair type!',
+        branchId: 'branch1',
+        type: 'product',
+        createdAt: new Date('2025-11-28T09:15:00'),
+        status: 'approved',
+        replies: []
+      },
+      {
+        id: 'fb-5',
+        customerName: 'John Doe',
+        customerEmail: 'john@example.com',
+        serviceOrProduct: 'Massage Therapy',
+        rating: 2,
+        comment: 'Not satisfied with the service quality.',
+        branchId: 'branch1',
+        type: 'service',
+        createdAt: new Date('2025-11-27T14:45:00'),
+        status: 'rejected',
+        replies: []
+      }
+    ];
+
+    setFeedbacks(mockFeedbacks);
   }, []);
 
   // Play notification sound for new messages
@@ -200,6 +310,83 @@ export default function AdminMessages() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
+  const handleApproveFeedback = (feedbackId: string) => {
+    setFeedbacks(feedbacks.map(fb =>
+      fb.id === feedbackId ? { ...fb, status: 'approved' } : fb
+    ));
+  };
+
+  const handleRejectFeedback = (feedbackId: string) => {
+    setFeedbacks(feedbacks.map(fb =>
+      fb.id === feedbackId ? { ...fb, status: 'rejected' } : fb
+    ));
+  };
+
+  const handleDeleteFeedback = (feedbackId: string) => {
+    setFeedbacks(feedbacks.filter(fb => fb.id !== feedbackId));
+  };
+
+  const getRatingColor = (rating: number) => {
+    if (rating >= 4) return 'text-green-600';
+    if (rating === 3) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getStatusColor = (status: string) => {
+    if (status === 'approved') return 'bg-green-100 text-green-800';
+    if (status === 'pending') return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
+  };
+
+  const handleAddFeedback = () => {
+    if (!newFeedbackComment.trim() || !newFeedbackService.trim()) return;
+
+    const newFeedback: Feedback = {
+      id: 'fb-' + Date.now(),
+      customerName: user?.email?.split('@')[0] || 'Admin',
+      customerEmail: user?.email || 'admin@example.com',
+      serviceOrProduct: newFeedbackService,
+      rating: newFeedbackRating,
+      comment: newFeedbackComment,
+      branchId: 'branch1',
+      type: 'service',
+      createdAt: new Date(),
+      status: 'approved',
+      replies: []
+    };
+
+    setFeedbacks([newFeedback, ...feedbacks]);
+    setNewFeedbackComment('');
+    setNewFeedbackService('');
+    setNewFeedbackRating(5);
+    setShowFeedbackForm(false);
+  };
+
+  const handleAddReply = (feedbackId: string) => {
+    if (!replyText.trim()) return;
+
+    setFeedbacks(feedbacks.map(fb => {
+      if (fb.id === feedbackId) {
+        return {
+          ...fb,
+          replies: [
+            ...fb.replies,
+            {
+              id: 'reply-' + Date.now(),
+              text: replyText,
+              author: 'Admin',
+              createdAt: new Date()
+            }
+          ]
+        };
+      }
+      return fb;
+    }));
+
+    setReplyText('');
+    setSelectedFeedback(null);
+  };
+
   return (
     <ProtectedRoute requiredRole="branch_admin">
       <div className="flex h-screen bg-gray-50">
@@ -242,195 +429,448 @@ export default function AdminMessages() {
 
           {/* Content */}
           <div className="flex-1 overflow-hidden">
-            <div className="h-full flex">
-              {/* Conversations List */}
-              <div className="w-80 border-r bg-white">
-                <div className="p-4 border-b">
-                  <div className="flex items-center gap-2 mb-4">
-                    <MessageCircle className="w-5 h-5 text-blue-600" />
-                    <h2 className="font-semibold">Conversations</h2>
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'messages' | 'feedbacks')} className="h-full flex flex-col">
+              <div className="border-b bg-white">
+                <div className="px-4">
+                  <TabsList className="grid grid-cols-2 w-fit">
+                    <TabsTrigger value="messages" className="flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4" />
+                      Messages
+                    </TabsTrigger>
+                    <TabsTrigger value="feedbacks" className="flex items-center gap-2">
+                      <Star className="w-4 h-4" />
+                      Feedbacks
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+              </div>
+
+              <TabsContent value="messages" className="flex-1 overflow-hidden m-0">
+                <div className="h-full flex">
+                  {/* Conversations List */}
+                  <div className="w-80 border-r bg-white">
+                    <div className="p-4 border-b">
+                      <div className="flex items-center gap-2 mb-4">
+                        <MessageCircle className="w-5 h-5 text-blue-600" />
+                        <h2 className="font-semibold">Conversations</h2>
+                      </div>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input
+                          placeholder="Search conversations..."
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+
+                    <ScrollArea className="flex-1">
+                      <div className="p-2">
+                        {branchConversations.map((conversation) => (
+                          <div
+                            key={conversation.id}
+                            onClick={() => handleConversationClick(conversation.id)}
+                            className={cn(
+                              "p-3 rounded-lg cursor-pointer mb-2 transition-colors",
+                              activeConversation === conversation.id
+                                ? "bg-blue-50 border border-blue-200"
+                                : "hover:bg-gray-50"
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Avatar className="w-10 h-10">
+                                <AvatarImage src="" />
+                                <AvatarFallback className="bg-blue-100 text-blue-600">
+                                  {getInitials(conversation.customerName)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <p className="font-medium text-sm truncate">
+                                    {conversation.customerName}
+                                  </p>
+                                  <span className="text-xs text-gray-500">
+                                    {conversation.lastMessage
+                                      ? formatDistanceToNow(conversation.lastMessage.timestamp, { addSuffix: true })
+                                      : formatDistanceToNow(conversation.createdAt, { addSuffix: true })
+                                    }
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-600 truncate mt-1">
+                                  {conversation.lastMessage?.content || 'No messages yet'}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {conversation.customerPhone && (
+                                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                                      <Phone className="w-3 h-3" />
+                                      <span>{conversation.customerPhone}</span>
+                                    </div>
+                                  )}
+                                  {conversation.unreadCount > 0 && (
+                                    <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
+                                      {conversation.unreadCount}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </div>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      placeholder="Search conversations..."
-                      className="pl-10"
-                    />
+
+                  {/* Chat Area */}
+                  <div className="flex-1 flex flex-col">
+                    {activeConversation ? (
+                      <>
+                        {/* Chat Header */}
+                        <div className="p-4 border-b bg-white">
+                          {(() => {
+                            const conversation = branchConversations.find(c => c.id === activeConversation);
+                            return conversation ? (
+                              <div className="flex items-center gap-3">
+                                <Avatar>
+                                  <AvatarImage src="" />
+                                  <AvatarFallback className="bg-blue-100 text-blue-600">
+                                    {getInitials(conversation.customerName)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <h3 className="font-medium">{conversation.customerName}</h3>
+                                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                                    {conversation.customerPhone && (
+                                      <span className="flex items-center gap-1">
+                                        <Phone className="w-3 h-3" />
+                                        {conversation.customerPhone}
+                                      </span>
+                                    )}
+                                    {conversation.customerEmail && (
+                                      <span className="flex items-center gap-1">
+                                        <Mail className="w-3 h-3" />
+                                        {conversation.customerEmail}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+
+                        {/* Messages */}
+                        <ScrollArea className="flex-1 p-4">
+                          <div className="space-y-4">
+                            {activeMessages.map((message) => (
+                              <div
+                                key={message.id}
+                                className={cn(
+                                  "flex gap-3",
+                                  message.senderType === 'admin' ? "justify-end" : "justify-start"
+                                )}
+                              >
+                                {message.senderType === 'customer' && (
+                                  <Avatar className="w-8 h-8">
+                                    <AvatarImage src="" />
+                                    <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
+                                      {getInitials(message.senderName)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                )}
+                                <div
+                                  className={cn(
+                                    "max-w-xs lg:max-w-md px-4 py-2 rounded-lg",
+                                    message.senderType === 'admin'
+                                      ? "bg-blue-600 text-white"
+                                      : "bg-gray-100 text-gray-900"
+                                  )}
+                                >
+                                  <p className="text-sm">{message.content}</p>
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <span className="text-xs opacity-70">
+                                      {formatDistanceToNow(message.timestamp, { addSuffix: true })}
+                                    </span>
+                                    {message.senderType === 'admin' && (
+                                      <CheckCheck className="w-3 h-3 opacity-70" />
+                                    )}
+                                  </div>
+                                </div>
+                                {message.senderType === 'admin' && (
+                                  <Avatar className="w-8 h-8">
+                                    <AvatarImage src="" />
+                                    <AvatarFallback className="bg-green-100 text-green-600 text-xs">
+                                      A
+                                    </AvatarFallback>
+                                  </Avatar>
+                                )}
+                              </div>
+                            ))}
+                            <div ref={messagesEndRef} />
+                          </div>
+                        </ScrollArea>
+
+                        {/* Message Input */}
+                        <div className="p-4 border-t bg-white">
+                          <div className="flex gap-2">
+                            <Input
+                              value={newMessage}
+                              onChange={(e) => setNewMessage(e.target.value)}
+                              placeholder="Type your message..."
+                              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                              className="flex-1"
+                            />
+                            <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
+                              <Send className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex-1 flex items-center justify-center bg-gray-50">
+                        <div className="text-center">
+                          <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">Select a conversation</h3>
+                          <p className="text-gray-600">Choose a customer conversation to start chatting</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
+              </TabsContent>
 
-                <ScrollArea className="flex-1">
-                  <div className="p-2">
-                    {branchConversations.map((conversation) => (
-                      <div
-                        key={conversation.id}
-                        onClick={() => handleConversationClick(conversation.id)}
-                        className={cn(
-                          "p-3 rounded-lg cursor-pointer mb-2 transition-colors",
-                          activeConversation === conversation.id
-                            ? "bg-blue-50 border border-blue-200"
-                            : "hover:bg-gray-50"
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-10 h-10">
-                            <AvatarImage src="" />
-                            <AvatarFallback className="bg-blue-100 text-blue-600">
-                              {getInitials(conversation.customerName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <p className="font-medium text-sm truncate">
-                                {conversation.customerName}
-                              </p>
-                              <span className="text-xs text-gray-500">
-                                {conversation.lastMessage
-                                  ? formatDistanceToNow(conversation.lastMessage.timestamp, { addSuffix: true })
-                                  : formatDistanceToNow(conversation.createdAt, { addSuffix: true })
-                                }
-                              </span>
+              <TabsContent value="feedbacks" className="flex-1 overflow-hidden m-0">
+                <div className="h-full flex flex-col">
+                  <div className="p-4 border-b bg-white">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Star className="w-5 h-5 text-yellow-500" />
+                        <h2 className="font-semibold">Service & Product Feedbacks</h2>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          size="sm" 
+                          onClick={() => setShowFeedbackForm(!showFeedbackForm)}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          + Add Feedback
+                        </Button>
+                        <span className="text-sm text-gray-600">{feedbacks.length} feedbacks</span>
+                      </div>
+                    </div>
+
+                    {showFeedbackForm && (
+                      <div className="mt-4 p-4 border rounded-lg bg-blue-50">
+                        <h3 className="font-semibold mb-3">Submit New Feedback</h3>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-sm font-medium">Service/Product Name *</label>
+                            <Input
+                              placeholder="Enter service or product name"
+                              value={newFeedbackService}
+                              onChange={(e) => setNewFeedbackService(e.target.value)}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium">Rating (1-5) *</label>
+                            <div className="flex gap-2 mt-1">
+                              {[1, 2, 3, 4, 5].map((num) => (
+                                <Button
+                                  key={num}
+                                  size="sm"
+                                  variant={newFeedbackRating === num ? 'default' : 'outline'}
+                                  onClick={() => setNewFeedbackRating(num)}
+                                  className="w-10 h-10 p-0"
+                                >
+                                  {num}
+                                </Button>
+                              ))}
                             </div>
-                            <p className="text-xs text-gray-600 truncate mt-1">
-                              {conversation.lastMessage?.content || 'No messages yet'}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              {conversation.customerPhone && (
-                                <div className="flex items-center gap-1 text-xs text-gray-500">
-                                  <Phone className="w-3 h-3" />
-                                  <span>{conversation.customerPhone}</span>
-                                </div>
-                              )}
-                              {conversation.unreadCount > 0 && (
-                                <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
-                                  {conversation.unreadCount}
-                                </Badge>
-                              )}
-                            </div>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium">Comment *</label>
+                            <Input
+                              placeholder="Write your feedback..."
+                              value={newFeedbackComment}
+                              onChange={(e) => setNewFeedbackComment(e.target.value)}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              onClick={handleAddFeedback}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              Submit
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => setShowFeedbackForm(false)}
+                            >
+                              Cancel
+                            </Button>
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
-                </ScrollArea>
-              </div>
 
-              {/* Chat Area */}
-              <div className="flex-1 flex flex-col">
-                {activeConversation ? (
-                  <>
-                    {/* Chat Header */}
-                    <div className="p-4 border-b bg-white">
-                      {(() => {
-                        const conversation = branchConversations.find(c => c.id === activeConversation);
-                        return conversation ? (
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarImage src="" />
-                              <AvatarFallback className="bg-blue-100 text-blue-600">
-                                {getInitials(conversation.customerName)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <h3 className="font-medium">{conversation.customerName}</h3>
-                              <div className="flex items-center gap-4 text-sm text-gray-600">
-                                {conversation.customerPhone && (
-                                  <span className="flex items-center gap-1">
-                                    <Phone className="w-3 h-3" />
-                                    {conversation.customerPhone}
-                                  </span>
-                                )}
-                                {conversation.customerEmail && (
-                                  <span className="flex items-center gap-1">
-                                    <Mail className="w-3 h-3" />
-                                    {conversation.customerEmail}
-                                  </span>
-                                )}
+                  <ScrollArea className="flex-1">
+                    <div className="p-4 space-y-4">
+                      {feedbacks.length > 0 ? (
+                        feedbacks.map((feedback) => (
+                          <Card key={feedback.id} className="hover:shadow-md transition-shadow">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex gap-3 flex-1">
+                                  <Avatar className="w-10 h-10 flex-shrink-0">
+                                    <AvatarImage src="" />
+                                    <AvatarFallback className="bg-blue-100 text-blue-600">
+                                      {getInitials(feedback.customerName)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <h3 className="font-medium text-sm">{feedback.customerName}</h3>
+                                      <Badge variant="outline" className="text-xs">
+                                        {feedback.type === 'service' ? '💼 Service' : '📦 Product'}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-sm text-gray-700 font-semibold mb-2">{feedback.serviceOrProduct}</p>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <div className="flex gap-1">
+                                        {Array.from({ length: 5 }).map((_, i) => (
+                                          <Star
+                                            key={i}
+                                            className={cn(
+                                              "w-4 h-4",
+                                              i < feedback.rating
+                                                ? "fill-yellow-500 text-yellow-500"
+                                                : "text-gray-300"
+                                            )}
+                                          />
+                                        ))}
+                                      </div>
+                                      <span className={cn("text-sm font-medium", getRatingColor(feedback.rating))}>
+                                        {feedback.rating}/5
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mb-2 italic">"{feedback.comment}"</p>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs text-gray-500">
+                                        {formatDistanceToNow(feedback.createdAt, { addSuffix: true })}
+                                      </span>
+                                      <Badge className={cn("text-xs", getStatusColor(feedback.status))}>
+                                        {feedback.status.charAt(0).toUpperCase() + feedback.status.slice(1)}
+                                      </Badge>
+                                    </div>
+
+                                    {/* Replies Section */}
+                                    {feedback.replies.length > 0 && (
+                                      <div className="mt-3 pt-3 border-t space-y-2">
+                                        {feedback.replies.map((reply) => (
+                                          <div key={reply.id} className="bg-gray-50 p-2 rounded text-sm">
+                                            <div className="flex items-center gap-1 mb-1">
+                                              <span className="font-medium text-xs text-blue-600">{reply.author}</span>
+                                              <span className="text-xs text-gray-500">
+                                                {formatDistanceToNow(reply.createdAt, { addSuffix: true })}
+                                              </span>
+                                            </div>
+                                            <p className="text-gray-700">{reply.text}</p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* Reply Input */}
+                                    {selectedFeedback === feedback.id ? (
+                                      <div className="mt-3 pt-3 border-t">
+                                        <div className="flex gap-2">
+                                          <Input
+                                            placeholder="Write a reply..."
+                                            value={replyText}
+                                            onChange={(e) => setReplyText(e.target.value)}
+                                            className="text-sm"
+                                          />
+                                          <Button
+                                            size="sm"
+                                            onClick={() => handleAddReply(feedback.id)}
+                                            disabled={!replyText.trim()}
+                                            className="bg-blue-600 hover:bg-blue-700"
+                                          >
+                                            Send
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => setSelectedFeedback(null)}
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => setSelectedFeedback(feedback.id)}
+                                        className="mt-3 text-blue-600 hover:text-blue-700"
+                                      >
+                                        Reply
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex gap-2 flex-shrink-0">
+                                  {feedback.status !== 'approved' && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleApproveFeedback(feedback.id)}
+                                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                  {feedback.status !== 'rejected' && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleRejectFeedback(feedback.id)}
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    >
+                                      <MoreVertical className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleDeleteFeedback(feedback.id)}
+                                    className="text-gray-600 hover:text-gray-700 hover:bg-gray-100"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-center py-12">
+                          <div>
+                            <Star className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">No feedbacks yet</h3>
+                            <p className="text-gray-600">Feedbacks from customers will appear here</p>
                           </div>
-                        ) : null;
-                      })()}
+                        </div>
+                      )}
                     </div>
-
-                    {/* Messages */}
-                    <ScrollArea className="flex-1 p-4">
-                      <div className="space-y-4">
-                        {activeMessages.map((message) => (
-                          <div
-                            key={message.id}
-                            className={cn(
-                              "flex gap-3",
-                              message.senderType === 'admin' ? "justify-end" : "justify-start"
-                            )}
-                          >
-                            {message.senderType === 'customer' && (
-                              <Avatar className="w-8 h-8">
-                                <AvatarImage src="" />
-                                <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
-                                  {getInitials(message.senderName)}
-                                </AvatarFallback>
-                              </Avatar>
-                            )}
-                            <div
-                              className={cn(
-                                "max-w-xs lg:max-w-md px-4 py-2 rounded-lg",
-                                message.senderType === 'admin'
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-gray-100 text-gray-900"
-                              )}
-                            >
-                              <p className="text-sm">{message.content}</p>
-                              <div className="flex items-center gap-1 mt-1">
-                                <span className="text-xs opacity-70">
-                                  {formatDistanceToNow(message.timestamp, { addSuffix: true })}
-                                </span>
-                                {message.senderType === 'admin' && (
-                                  <CheckCheck className="w-3 h-3 opacity-70" />
-                                )}
-                              </div>
-                            </div>
-                            {message.senderType === 'admin' && (
-                              <Avatar className="w-8 h-8">
-                                <AvatarImage src="" />
-                                <AvatarFallback className="bg-green-100 text-green-600 text-xs">
-                                  A
-                                </AvatarFallback>
-                              </Avatar>
-                            )}
-                          </div>
-                        ))}
-                        <div ref={messagesEndRef} />
-                      </div>
-                    </ScrollArea>
-
-                    {/* Message Input */}
-                    <div className="p-4 border-t bg-white">
-                      <div className="flex gap-2">
-                        <Input
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          placeholder="Type your message..."
-                          onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                          className="flex-1"
-                        />
-                        <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-                          <Send className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center bg-gray-50">
-                    <div className="text-center">
-                      <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">Select a conversation</h3>
-                      <p className="text-gray-600">Choose a customer conversation to start chatting</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+                  </ScrollArea>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Calendar, Clock, User, ChevronLeft, ChevronRight, Settings, RotateCcw, Grid3X3 } from "lucide-react";
 import { format, addDays, startOfDay, addMinutes, isSameDay, parseISO } from "date-fns";
+import { useStaffStore } from "@/stores/staff.store";
 
 interface Appointment {
   id: number;
@@ -34,6 +36,17 @@ interface AdvancedCalendarProps {
   onAppointmentClick: (appointment: Appointment) => void;
   onStatusChange: (appointmentId: number, newStatus: string) => void;
   onCreateBooking?: (barber: string, date: string, time: string) => void;
+}
+
+// Helper function to get staff profile images
+function getStaffImage(staffName: string): string {
+  const staffImageMap: Record<string, string> = {
+    'Mike Johnson': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop',
+    'Alex Rodriguez': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop',
+    'Sarah Chen': 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop',
+    'James Smith': 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop',
+  };
+  return staffImageMap[staffName] || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop';
 }
 
 export function AdvancedCalendar({ appointments, onAppointmentClick, onStatusChange, onCreateBooking }: AdvancedCalendarProps) {
@@ -79,11 +92,92 @@ export function AdvancedCalendar({ appointments, onAppointmentClick, onStatusCha
     return isSameDate && isSameBarber;
   });
 
-  // Get appointment for specific time slot and barber
+  // Helper function to convert 12-hour time to 24-hour format
+  const convertTo24Hour = (time12h: string): string => {
+    const [time, period] = time12h.split(' ');
+    const [hours, minutes] = time.split(':');
+    let hour24 = parseInt(hours);
+    
+    if (period === 'PM' && hour24 !== 12) {
+      hour24 += 12;
+    } else if (period === 'AM' && hour24 === 12) {
+      hour24 = 0;
+    }
+    
+    return `${hour24.toString().padStart(2, '0')}:${minutes}`;
+  };
+
+  // Helper function to parse duration string to minutes
+  const parseDuration = (duration: string): number => {
+    const match = duration.match(/(\d+)\s*min/);
+    return match ? parseInt(match[1]) : 30;
+  };
+
+  // Check if an appointment covers a specific time slot
+  const doesAppointmentCoverSlot = (appointment: Appointment, slot: string): boolean => {
+    const appointmentTime24 = convertTo24Hour(appointment.time);
+    const appointmentDuration = parseDuration(appointment.duration);
+    
+    // Convert slot and appointment time to minutes since start of day
+    const [slotHours, slotMinutes] = slot.split(':').map(Number);
+    const [aptHours, aptMinutes] = appointmentTime24.split(':').map(Number);
+    
+    const slotMinutesSinceStart = slotHours * 60 + slotMinutes;
+    const appointmentStartMinutes = aptHours * 60 + aptMinutes;
+    const appointmentEndMinutes = appointmentStartMinutes + appointmentDuration;
+    
+    return slotMinutesSinceStart >= appointmentStartMinutes && slotMinutesSinceStart < appointmentEndMinutes;
+  };
+
+  // Get all appointments for specific time slot and barber (to support overlapping bookings)
+  const getAppointmentsForSlot = (timeSlot: string, barber: string) => {
+    return filteredAppointments.filter(apt =>
+      apt.barber === barber && doesAppointmentCoverSlot(apt, timeSlot)
+    );
+  };
+
+  // Get appointment for specific time slot and barber (for backwards compatibility)
   const getAppointmentForSlot = (timeSlot: string, barber: string) => {
     return filteredAppointments.find(apt =>
-      apt.time === timeSlot && apt.barber === barber
+      apt.barber === barber && doesAppointmentCoverSlot(apt, timeSlot)
     );
+  };
+
+  // Check if this is the start slot of an appointment
+  const isAppointmentStart = (appointment: Appointment, timeSlot: string): boolean => {
+    const appointmentTime24 = convertTo24Hour(appointment.time);
+    const [aptHours, aptMinutes] = appointmentTime24.split(':').map(Number);
+    const appointmentStartMinutes = aptHours * 60 + aptMinutes;
+    
+    const [slotHours, slotMinutes] = timeSlot.split(':').map(Number);
+    const slotStart = slotHours * 60 + slotMinutes;
+    const slotEnd = slotStart + timeSlotGap;
+    
+    return appointmentStartMinutes >= slotStart && appointmentStartMinutes < slotEnd;
+  };
+
+  // Calculate how many slots an appointment spans
+  const getAppointmentSpan = (appointment: Appointment, startTimeSlot: string): number => {
+    const appointmentTime24 = convertTo24Hour(appointment.time);
+    const duration = parseDuration(appointment.duration);
+    const [aptHours, aptMinutes] = appointmentTime24.split(':').map(Number);
+    const appointmentEndMinutes = aptHours * 60 + aptMinutes + duration;
+    
+    let span = 0;
+    let foundStart = false;
+    for (const slot of timeSlots) {
+      if (slot === startTimeSlot) foundStart = true;
+      if (foundStart) {
+        const [h, m] = slot.split(':').map(Number);
+        const slotStart = h * 60 + m;
+        if (slotStart < appointmentEndMinutes) {
+          span++;
+        } else {
+          break;
+        }
+      }
+    }
+    return span || 1;
   };
 
   const getStatusColor = (status: string) => {
@@ -274,7 +368,7 @@ export function AdvancedCalendar({ appointments, onAppointmentClick, onStatusCha
         )}
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto overflow-y-auto max-h-[500px] sm:max-h-[600px] w-full">
+        <div className="overflow-x-auto overflow-y-auto max-h-[900px] sm:max-h-[600px] w-full">
           <div className="min-w-full" style={{ width: 'max-content' }}>
             {layoutMode === 'time-top' ? (
               // Time on top, Employees on left (current layout)
@@ -292,114 +386,174 @@ export function AdvancedCalendar({ appointments, onAppointmentClick, onStatusCha
                 </div>
 
                 {/* Barber rows */}
-                {(selectedBarber === 'all' ? barbers : [selectedBarber]).map(barber => (
-                  <div key={barber} className="grid gap-1 mb-1" style={{ gridTemplateColumns: `clamp(120px, 15vw, 200px) repeat(${timeSlots.length}, minmax(50px, 1fr))` }}>
-                    <div className="p-2 sm:p-3 bg-muted rounded flex items-center gap-2 sticky left-0 border-r" style={{ minWidth: 'clamp(120px, 15vw, 200px)' }}>
-                      <User className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                      <span className="font-medium text-xs sm:text-sm truncate">{barber}</span>
-                    </div>
-                    {timeSlots.map(slot => {
-                      const appointment = getAppointmentForSlot(slot, barber);
-                      return (
+                {(selectedBarber === 'all' ? barbers : [selectedBarber]).map(barber => {
+                  let slotIndex = 0;
+                  const rowElements: React.JSX.Element[] = [];
+                  
+                  while (slotIndex < timeSlots.length) {
+                    const currentSlot = timeSlots[slotIndex];
+                    const appointment = getAppointmentForSlot(currentSlot, barber);
+                    
+                    if (appointment && isAppointmentStart(appointment, currentSlot)) {
+                      // This is the start of a multi-slot appointment
+                      const span = Math.min(getAppointmentSpan(appointment, currentSlot), timeSlots.length - slotIndex);
+                      
+                      rowElements.push(
                         <div
-                          key={`${barber}-${slot}`}
-                          className={`p-1 border rounded cursor-pointer hover:shadow-md transition-all duration-200 min-h-[60px] flex items-center justify-center ${
-                            appointment ? 'border-2 border-primary/50 bg-primary/5' : 'border-dashed border-muted-foreground/30 hover:border-muted-foreground/50'
-                          }`}
-                          onClick={() => appointment && onAppointmentClick(appointment)}
+                          key={`${barber}-${currentSlot}`}
+                          className={`p-1 border rounded cursor-pointer hover:shadow-md transition-all duration-200 min-h-[60px] flex items-center justify-center border-2 border-primary/50 bg-primary/5`}
+                          style={{ gridColumn: `span ${span}` }}
+                          onClick={() => onAppointmentClick(appointment)}
                         >
-                          {appointment ? (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-xs p-1">
+                            <div className={`w-3 h-3 rounded-full mb-1 ${getStatusColor(appointment.status)}`} />
+                            <div className="font-medium truncate w-full text-center leading-tight">
+                              {appointment.customer.split(' ')[0]}
+                            </div>
+                            <div className="text-muted-foreground truncate w-full text-center text-[10px] leading-tight">
+                              {appointment.service}
+                            </div>
+                            <div className="text-muted-foreground text-[9px] mt-1">
+                              {appointment.duration}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                      
+                      slotIndex += span;
+                    } else if (appointment) {
+                      // This slot is covered by an appointment that started earlier - skip it
+                      slotIndex += 1;
+                    } else {
+                      // Empty slot
+                      rowElements.push(
+                        <div
+                          key={`${barber}-${currentSlot}`}
+                          className="p-1 border rounded cursor-pointer hover:shadow-md transition-all duration-200 min-h-[60px] flex items-center justify-center border-dashed border-muted-foreground/30 hover:border-muted-foreground/50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCreateBooking && onCreateBooking(barber, format(selectedDate, 'yyyy-MM-dd'), currentSlot);
+                          }}
+                        >
+                          <div className="text-muted-foreground/50 text-xs text-center cursor-pointer hover:text-primary transition-colors">
+                            + Book
+                          </div>
+                        </div>
+                      );
+                      slotIndex += 1;
+                    }
+                  }
+                  
+                  return (
+                    <div key={barber} className="grid gap-1 mb-1" style={{ gridTemplateColumns: `clamp(120px, 15vw, 200px) repeat(${timeSlots.length}, minmax(50px, 1fr))` }}>
+                      <div className="p-2 sm:p-3 bg-muted rounded flex items-center gap-2 sticky left-0 border-r" style={{ minWidth: 'clamp(120px, 15vw, 200px)' }}>
+                        <div className="relative w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden shrink-0 border border-gray-300">
+                          <Image 
+                            src={getStaffImage(barber)} 
+                            alt={barber} 
+                            fill 
+                            className="object-cover"
+                            sizes="(max-width: 640px) 24px, 32px"
+                          />
+                        </div>
+                        <span className="font-medium text-xs sm:text-sm truncate">{barber}</span>
+                      </div>
+                      {rowElements}
+                    </div>
+                  );
+                })}
+              </>
+            ) : (
+              // Employees on top, Time on left (rotated layout)
+              <div 
+                className="grid gap-1" 
+                style={{ 
+                  gridTemplateColumns: `clamp(120px, 15vw, 150px) repeat(${(selectedBarber === 'all' ? barbers : [selectedBarber]).length}, minmax(80px, 1fr))`,
+                }}
+              >
+                {/* Header row */}
+                <div className="p-2 font-medium text-sm text-muted-foreground sticky top-0 bg-background z-20 border-b">
+                  Time / Employee
+                </div>
+                {(selectedBarber === 'all' ? barbers : [selectedBarber]).map(barber => (
+                  <div key={barber} className="p-2 text-xs text-center font-medium text-muted-foreground border rounded bg-muted/50 flex items-center justify-center gap-1 sticky top-0 bg-background z-20 border-b">
+                    <div className="relative w-5 h-5 sm:w-6 sm:h-6 rounded-full overflow-hidden shrink-0 border border-gray-300">
+                      <Image 
+                        src={getStaffImage(barber)} 
+                        alt={barber} 
+                        fill 
+                        className="object-cover"
+                        sizes="(max-width: 640px) 20px, 24px"
+                      />
+                    </div>
+                    <span className="hidden sm:inline">{barber}</span>
+                    <span className="sm:hidden">{barber.split(' ')[0]}</span>
+                  </div>
+                ))}
+
+                {/* Grid cells */}
+                {timeSlots.map((slot, slotIndex) => (
+                  <React.Fragment key={slot}>
+                    {/* Time label for this row */}
+                    <div className="p-2 sm:p-3 bg-muted rounded flex items-center gap-2 sticky left-0 z-20 border-r min-h-[80px]">
+                      <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="font-medium text-xs sm:text-sm">{slot}</span>
+                    </div>
+                    
+                    {/* Barber cells for this row */}
+                    {(selectedBarber === 'all' ? barbers : [selectedBarber]).map(barber => {
+                      const appointment = getAppointmentForSlot(slot, barber);
+                      
+                      if (appointment && isAppointmentStart(appointment, slot)) {
+                        const span = Math.min(getAppointmentSpan(appointment, slot), timeSlots.length - slotIndex);
+                        return (
+                          <div
+                            key={`${slot}-${barber}`}
+                            className="p-1 border rounded cursor-pointer hover:shadow-md transition-all duration-200 flex items-center justify-center border-2 border-primary/50 bg-primary/5"
+                            style={{ gridRow: `span ${span}` }}
+                            onClick={() => onAppointmentClick(appointment)}
+                          >
                             <div className="w-full h-full flex flex-col items-center justify-center text-xs p-1">
                               <div className={`w-3 h-3 rounded-full mb-1 ${getStatusColor(appointment.status)}`} />
+                              <div className="text-muted-foreground text-[9px] mb-0.5 font-medium">
+                                {appointment.time}
+                              </div>
                               <div className="font-medium truncate w-full text-center leading-tight">
                                 {appointment.customer.split(' ')[0]}
                               </div>
                               <div className="text-muted-foreground truncate w-full text-center text-[10px] leading-tight">
                                 {appointment.service}
                               </div>
+                              <div className="text-muted-foreground text-[9px] mt-1">
+                                {appointment.duration}
+                              </div>
                             </div>
-                          ) : (
-                            <div
-                              className="text-muted-foreground/50 text-xs text-center cursor-pointer hover:text-primary transition-colors"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onCreateBooking && onCreateBooking(barber, format(selectedDate, 'yyyy-MM-dd'), slot);
-                              }}
-                            >
-                              + Book
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </>
-            ) : (
-              // Employees on top, Time on left (rotated layout)
-              <>
-                {/* Header with barbers */}
-                <div className="grid gap-1 mb-2 sticky top-0 bg-background z-10" style={{ gridTemplateColumns: `clamp(120px, 15vw, 150px) 1fr` }}>
-                  <div className="p-2 font-medium text-sm text-muted-foreground">
-                    Time / Employee
-                  </div>
-                  <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${(selectedBarber === 'all' ? barbers : [selectedBarber]).length}, minmax(80px, 1fr))` }}>
-                    {(selectedBarber === 'all' ? barbers : [selectedBarber]).map(barber => (
-                      <div key={barber} className="p-2 text-xs text-center font-medium text-muted-foreground border rounded bg-muted/50 flex items-center justify-center gap-1">
-                        <User className="w-3 h-3" />
-                        <span className="hidden sm:inline">{barber}</span>
-                        <span className="sm:hidden">{barber.split(' ')[0]}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Time rows */}
-                {timeSlots.map(slot => (
-                  <div key={slot} className="grid gap-1 mb-1" style={{ gridTemplateColumns: `clamp(120px, 15vw, 150px) 1fr` }}>
-                    <div className="p-2 sm:p-3 bg-muted rounded flex items-center gap-2 sticky left-0" style={{ minWidth: 'clamp(120px, 15vw, 150px)' }}>
-                      <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="font-medium text-xs sm:text-sm">{slot}</span>
-                    </div>
-                    <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${(selectedBarber === 'all' ? barbers : [selectedBarber]).length}, minmax(60px, 1fr))` }}>
-                      {(selectedBarber === 'all' ? barbers : [selectedBarber]).map(barber => {
-                        const appointment = getAppointmentForSlot(slot, barber);
+                          </div>
+                        );
+                      } else if (appointment) {
+                        // Covered by an ongoing appointment - skip rendering
+                        return null;
+                      } else {
+                        // Empty slot
                         return (
                           <div
                             key={`${slot}-${barber}`}
-                            className={`p-1 border rounded cursor-pointer hover:shadow-md transition-all duration-200 min-h-[80px] flex items-center justify-center ${
-                              appointment ? 'border-2 border-primary/50 bg-primary/5' : 'border-dashed border-muted-foreground/30 hover:border-muted-foreground/50'
-                            }`}
-                            onClick={() => appointment && onAppointmentClick(appointment)}
+                            className="p-1 border rounded cursor-pointer hover:shadow-md transition-all duration-200 flex items-center justify-center border-dashed border-muted-foreground/30 hover:border-muted-foreground/50 min-h-[80px]"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCreateBooking && onCreateBooking(barber, format(selectedDate, 'yyyy-MM-dd'), slot);
+                            }}
                           >
-                            {appointment ? (
-                              <div className="w-full h-full flex flex-col items-center justify-center text-xs p-1">
-                                <div className={`w-3 h-3 rounded-full mb-1 ${getStatusColor(appointment.status)}`} />
-                                <div className="font-medium truncate w-full text-center leading-tight">
-                                  {appointment.customer.split(' ')[0]}
-                                </div>
-                                <div className="text-muted-foreground truncate w-full text-center text-[10px] leading-tight">
-                                  {appointment.service}
-                                </div>
-                              </div>
-                            ) : (
-                              <div
-                                className="text-muted-foreground/50 text-xs text-center cursor-pointer hover:text-primary transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onCreateBooking && onCreateBooking(barber, format(selectedDate, 'yyyy-MM-dd'), slot);
-                                }}
-                              >
-                                + Book
-                              </div>
-                            )}
+                            <div className="text-muted-foreground/50 text-xs text-center cursor-pointer hover:text-primary transition-colors">
+                              + Book
+                            </div>
                           </div>
                         );
-                      })}
-                    </div>
-                  </div>
+                      }
+                    })}
+                  </React.Fragment>
                 ))}
-              </>
+              </div>
             )}
           </div>
         </div>

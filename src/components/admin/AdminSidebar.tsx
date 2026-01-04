@@ -91,6 +91,11 @@ const branchAdminNavItems = [
     icon: TrendingUp,
   },
   {
+    title: 'Expenses',
+    href: '/admin/expenses',
+    icon: DollarSign,
+  },
+  {
     title: 'Messages',
     href: '/admin/messages',
     icon: MessageCircle,
@@ -169,6 +174,11 @@ const superAdminNavItems = [
     icon: DollarSign,
   },
   {
+    title: 'Expenses',
+    href: '/super-admin/expenses',
+    icon: DollarSign,
+  },
+  {
     title: 'Settings',
     href: '/super-admin/settings',
     icon: Settings,
@@ -180,14 +190,18 @@ function SidebarContent({ role, onLogout, onToggle, isCollapsed = false }: Omit<
   const navItems = role === 'super_admin' ? superAdminNavItems : branchAdminNavItems;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-primary border-r border-secondary/10">
       {/* Logo */}
-      <div className="flex h-16 items-center border-b px-4 lg:px-6">
+      <div className="flex h-16 items-center border-b border-secondary/10 px-4 lg:px-6">
         <div className="flex items-center justify-between w-full">
-          <Link href="/" className="flex items-center gap-2">
-            <Scissors className="h-6 w-6 lg:h-8 lg:w-8 text-primary" />
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-8 h-8 bg-secondary flex items-center justify-center rounded-lg transition-all duration-300 group-hover:rotate-12 shadow-lg shadow-secondary/20">
+              <Scissors className="h-4 w-4 text-primary" />
+            </div>
             {!isCollapsed && (
-              <span className="text-lg lg:text-xl font-serif font-bold text-primary">Premium Cuts</span>
+              <span className="text-lg font-serif font-bold text-white tracking-tighter">
+                MAN OF<span className="text-secondary">CAVE</span>
+              </span>
             )}
           </Link>
           <div className="flex items-center gap-2">
@@ -217,21 +231,23 @@ function SidebarContent({ role, onLogout, onToggle, isCollapsed = false }: Omit<
 
       {/* Navigation */}
       <ScrollArea className="flex-1 px-3 h-full">
-        <div className="space-y-2 py-4">
+        <div className="space-y-1 py-4">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link key={item.href} href={item.href}>
                 <Button
-                  variant={isActive ? "secondary" : "ghost"}
+                  variant="ghost"
                   className={cn(
-                    "w-full justify-start gap-3 h-12",
+                    "w-full justify-start gap-3 h-10 rounded-lg transition-all duration-200",
                     isCollapsed && "justify-center px-0",
-                    isActive && "bg-secondary text-secondary-foreground"
+                    isActive 
+                      ? "bg-secondary text-primary font-semibold shadow-lg shadow-secondary/20" 
+                      : "text-gray-400 hover:text-secondary hover:bg-white/5"
                   )}
                 >
-                  <item.icon className="h-5 w-5" />
-                  {!isCollapsed && item.title}
+                  <item.icon className={cn("h-5 w-5", isActive ? "text-primary" : "text-gray-400 group-hover:text-secondary")} />
+                  {!isCollapsed && <span className="text-sm">{item.title}</span>}
                 </Button>
               </Link>
             );
@@ -240,11 +256,11 @@ function SidebarContent({ role, onLogout, onToggle, isCollapsed = false }: Omit<
       </ScrollArea>
 
       {/* Logout */}
-      <div className="border-t p-4 mt-auto">
+      <div className="border-t border-secondary/10 p-4 mt-auto">
         <Button
-          variant="outline"
+          variant="ghost"
           className={cn(
-            "w-full justify-start gap-3",
+            "w-full justify-start gap-3 text-gray-400 hover:text-red-400 hover:bg-red-400/10",
             isCollapsed && "justify-center px-0"
           )}
           onClick={onLogout}
@@ -270,7 +286,7 @@ export function AdminSidebar({ role, onLogout, isOpen = true, onToggle }: Sideba
 
       {/* Sidebar */}
       <div className={cn(
-        "h-full flex-shrink-0 bg-white border-r transition-all duration-300 ease-in-out",
+        "h-full shrink-0 bg-white border-r transition-all duration-300 ease-in-out",
         // Mobile: slide in/out completely (fixed positioning for mobile overlay)
         "fixed inset-y-0 left-0 z-50 lg:relative lg:z-auto lg:translate-x-0",
         isOpen ? "translate-x-0 w-64" : "-translate-x-full w-64",

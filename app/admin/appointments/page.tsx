@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Clock, User, Search, Filter, CheckCircle, XCircle, AlertCircle, Bell, Smartphone, Globe, Plus, Edit, Trash2, Phone, Mail, RefreshCw, FileText, Scissors, Package, DollarSign, Receipt, CheckCircle2, Eye, Play, Star, FileCheck } from "lucide-react";
+import { Calendar, Clock, User, Search, Filter, CheckCircle, XCircle, AlertCircle, Bell, Smartphone, Globe, Plus, Edit, Trash2, Phone, Mail, RefreshCw, FileText, Scissors, Package, DollarSign, Receipt, CheckCircle2, Eye, Play, Star, FileCheck, Download, Printer, MoreVertical } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AdminSidebar, AdminMobileSidebar } from "@/components/admin/AdminSidebar";
@@ -20,13 +20,21 @@ import { useRouter } from "next/navigation";
 import { AdvancedCalendar } from "@/components/ui/advanced-calendar";
 import { NotificationSystem, useNotifications } from "@/components/ui/notification-system";
 import { useCurrencyStore } from "@/stores/currency.store";
+import { useBookingStore } from "@/stores/booking.store";
+import { useBranchStore } from "@/stores/branch.store";
 import { cn } from "@/lib/utils";
 import { CurrencySwitcher } from "@/components/ui/currency-switcher";
+import { getTemplate, InvoiceData } from "@/components/invoice-templates";
+import { generateInvoiceNumber } from "@/lib/invoice-utils";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function AdminAppointments() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const { formatCurrency } = useCurrencyStore();
+  const { getConfirmedBookings } = useBookingStore();
+  const { branches, getBranchByName } = useBranchStore();
+  const { addNotification } = useNotifications();
 
   const handleLogout = () => {
     logout();
@@ -34,31 +42,133 @@ export default function AdminAppointments() {
   };
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [viewMode, setViewMode] = useState<'calendar' | 'advanced-calendar' | 'list'>('advanced-calendar');
+  const [viewMode, setViewMode] = useState<'calendar' | 'advanced-calendar' | 'list' | 'approvals' | 'product-orders'>('advanced-calendar');
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [selectedAppointmentForInvoice, setSelectedAppointmentForInvoice] = useState<any>(null);
+  const [invoiceNumber, setInvoiceNumber] = useState('');
   const [bookingData, setBookingData] = useState({
     customer: '',
     phone: '',
     email: '',
     service: '',
     barber: '',
+    teamMembers: [] as Array<{name: string, tip: number}>,
     date: '',
     time: '',
     notes: '',
     products: [] as Array<{name: string, category: string, price: number, quantity: number}>,
     tax: 5,
     serviceCharges: 0,
+    discount: 0,
+    discountType: 'fixed' as 'fixed' | 'percentage',
+    serviceTip: 0,
+    paymentMethods: [] as Array<'cash' | 'card' | 'check' | 'digital'>,
     status: 'pending',
     generateInvoice: false
   });
 
+  // Product Orders State
+  const [productOrders, setProductOrders] = useState<any[]>([
+    {
+      id: 'PO-001',
+      customer: 'John Doe',
+      products: ['Premium Shampoo', 'Beard Oil'],
+      quantity: 3,
+      total: 42,
+      status: 'completed',
+      date: '2026-01-04',
+      payment: 'card'
+    },
+    {
+      id: 'PO-002',
+      customer: 'Sarah Johnson',
+      products: ['Hair Wax', 'Styling Gel'],
+      quantity: 2,
+      total: 18,
+      status: 'completed',
+      date: '2026-01-04',
+      payment: 'cash'
+    },
+    {
+      id: 'PO-003',
+      customer: 'Mike Smith',
+      products: ['Hair Clippers'],
+      quantity: 1,
+      total: 45,
+      status: 'pending',
+      date: '2026-01-03',
+      payment: 'card'
+    },
+    {
+      id: 'PO-004',
+      customer: 'Emma Wilson',
+      products: ['Face Mask', 'Aftershave'],
+      quantity: 2,
+      total: 38,
+      status: 'pending',
+      date: '2026-01-03',
+      payment: 'digital'
+    },
+    {
+      id: 'PO-005',
+      customer: 'David Brown',
+      products: ['Premium Shampoo', 'Hair Brush'],
+      quantity: 2,
+      total: 40,
+      status: 'completed',
+      date: '2026-01-02',
+      payment: 'card'
+    }
+  ]);
+
+  const [allowPendingOrders] = useState(true); // This would come from settings page
+
+  // Product Order Actions
+  const handleOrderStatusChange = (orderId: string, newStatus: 'pending' | 'approved' | 'rejected' | 'delivered') => {
+    if (newStatus === 'pending' && !allowPendingOrders) {
+      addNotification({
+        type: 'warning',
+        title: 'Not Allowed',
+        message: 'Pending status is disabled in settings'
+      });
+      return;
+    }
+
+    setProductOrders(productOrders.map(order =>
+      order.id === orderId ? { ...order, status: newStatus } : order
+    ));
+
+    const statusMessages: { [key: string]: string } = {
+      pending: 'Order marked as pending',
+      approved: 'Order approved successfully',
+      rejected: 'Order rejected',
+      delivered: 'Order marked as delivered'
+    };
+
+    addNotification({
+      type: 'success',
+      title: 'Status Updated',
+      message: statusMessages[newStatus]
+    });
+  };
+
+  const handleDeleteOrder = (orderId: string) => {
+    setProductOrders(productOrders.filter(order => order.id !== orderId));
+    addNotification({
+      type: 'success',
+      title: 'Order Deleted',
+      message: 'Product order has been removed'
+    });
+  };
+
   // Notification system
-  const { notifications, addNotification, markAsRead, dismiss } = useNotifications();
+  const { notifications, markAsRead, dismiss } = useNotifications();
 
   // Mock products data
   const mockProducts = [
@@ -88,16 +198,44 @@ export default function AdminAppointments() {
   const calculateTax = () => {
     const servicePrice = getServicePrice(bookingData.service);
     const productsTotal = bookingData.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
-    const subtotal = servicePrice + productsTotal + bookingData.serviceCharges;
+    let subtotal = servicePrice + productsTotal + bookingData.serviceCharges;
+    
+    // Apply discount to subtotal
+    if (bookingData.discount > 0) {
+      if (bookingData.discountType === 'percentage') {
+        subtotal = subtotal * (1 - bookingData.discount / 100);
+      } else {
+        subtotal = Math.max(0, subtotal - bookingData.discount);
+      }
+    }
+    
     return ((subtotal * bookingData.tax) / 100).toFixed(2);
   };
 
   const calculateTotal = () => {
     const servicePrice = getServicePrice(bookingData.service);
     const productsTotal = bookingData.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
-    const subtotal = servicePrice + productsTotal + bookingData.serviceCharges;
+    let subtotal = servicePrice + productsTotal + bookingData.serviceCharges;
+    
+    // Apply discount to subtotal
+    let discountAmount = 0;
+    if (bookingData.discount > 0) {
+      if (bookingData.discountType === 'percentage') {
+        discountAmount = subtotal * (bookingData.discount / 100);
+        subtotal = subtotal * (1 - bookingData.discount / 100);
+      } else {
+        discountAmount = bookingData.discount;
+        subtotal = Math.max(0, subtotal - bookingData.discount);
+      }
+    }
+    
+    // Calculate tax on discounted subtotal
     const taxAmount = (subtotal * bookingData.tax) / 100;
-    return (subtotal + taxAmount).toFixed(2);
+    
+    // Add tips (not subject to tax)
+    const totalTips = bookingData.serviceTip + bookingData.teamMembers.reduce((sum, tm) => sum + tm.tip, 0);
+    
+    return (subtotal + taxAmount + totalTips).toFixed(2);
   };
 
   // Mock appointments data with more comprehensive data
@@ -107,7 +245,7 @@ export default function AdminAppointments() {
       customer: "John Doe",
       service: "Classic Haircut",
       barber: "Mike Johnson",
-      date: "2025-12-01",
+      date: "2026-01-03",
       time: "9:00 AM",
       duration: "30 min",
       price: 35,
@@ -115,17 +253,17 @@ export default function AdminAppointments() {
       phone: "(555) 123-4567",
       email: "john.doe@email.com",
       notes: "Regular customer, prefers fade",
-      source: "website", // website or mobile
+      source: "website",
       branch: "Downtown Premium",
-      createdAt: "2025-11-30T08:00:00Z",
-      updatedAt: "2025-12-01T09:30:00Z"
+      createdAt: "2026-01-02T08:00:00Z",
+      updatedAt: "2026-01-03T09:30:00Z"
     },
     {
       id: 2,
       customer: "Jane Smith",
       service: "Beard Trim & Shape",
       barber: "Alex Rodriguez",
-      date: "2025-12-01",
+      date: "2026-01-03",
       time: "10:00 AM",
       duration: "20 min",
       price: 25,
@@ -135,15 +273,15 @@ export default function AdminAppointments() {
       notes: "First time customer",
       source: "mobile",
       branch: "Downtown Premium",
-      createdAt: "2025-11-30T14:30:00Z",
-      updatedAt: "2025-12-01T10:00:00Z"
+      createdAt: "2026-01-02T14:30:00Z",
+      updatedAt: "2026-01-03T10:00:00Z"
     },
     {
       id: 3,
       customer: "Bob Johnson",
       service: "Premium Package",
       barber: "Mike Johnson",
-      date: "2025-12-01",
+      date: "2026-01-03",
       time: "11:00 AM",
       duration: "60 min",
       price: 85,
@@ -153,15 +291,15 @@ export default function AdminAppointments() {
       notes: "VIP customer, prefers hot towel",
       source: "website",
       branch: "Downtown Premium",
-      createdAt: "2025-11-29T16:45:00Z",
-      updatedAt: "2025-11-29T16:45:00Z"
+      createdAt: "2026-01-01T16:45:00Z",
+      updatedAt: "2026-01-01T16:45:00Z"
     },
     {
       id: 4,
       customer: "Alice Brown",
       service: "Haircut & Style",
       barber: "Sarah Chen",
-      date: "2025-12-01",
+      date: "2026-01-03",
       time: "2:00 PM",
       duration: "45 min",
       price: 55,
@@ -171,15 +309,15 @@ export default function AdminAppointments() {
       notes: "Color treatment last visit",
       source: "mobile",
       branch: "Downtown Premium",
-      createdAt: "2025-11-30T11:20:00Z",
-      updatedAt: "2025-11-30T11:20:00Z"
+      createdAt: "2026-01-02T11:20:00Z",
+      updatedAt: "2026-01-02T11:20:00Z"
     },
     {
       id: 5,
       customer: "Charlie Wilson",
       service: "Beard Grooming",
       barber: "Alex Rodriguez",
-      date: "2025-12-01",
+      date: "2026-01-03",
       time: "3:30 PM",
       duration: "25 min",
       price: 30,
@@ -189,15 +327,15 @@ export default function AdminAppointments() {
       notes: "Emergency cancellation",
       source: "website",
       branch: "Downtown Premium",
-      createdAt: "2025-11-30T09:15:00Z",
-      updatedAt: "2025-12-01T15:00:00Z"
+      createdAt: "2026-01-02T09:15:00Z",
+      updatedAt: "2026-01-03T15:00:00Z"
     },
     {
       id: 6,
       customer: "David Lee",
       service: "Classic Haircut",
       barber: "Mike Johnson",
-      date: "2025-12-02",
+      date: "2026-01-04",
       time: "9:30 AM",
       duration: "30 min",
       price: 35,
@@ -207,15 +345,15 @@ export default function AdminAppointments() {
       notes: "New customer referral",
       source: "mobile",
       branch: "Downtown Premium",
-      createdAt: "2025-12-01T10:30:00Z",
-      updatedAt: "2025-12-01T10:30:00Z"
+      createdAt: "2026-01-03T10:30:00Z",
+      updatedAt: "2026-01-03T10:30:00Z"
     },
     {
       id: 7,
       customer: "Emma Davis",
       service: "Hair Color",
       barber: "Sarah Chen",
-      date: "2025-12-02",
+      date: "2026-01-04",
       time: "1:00 PM",
       duration: "90 min",
       price: 120,
@@ -225,8 +363,422 @@ export default function AdminAppointments() {
       notes: "Full color treatment",
       source: "website",
       branch: "Downtown Premium",
-      createdAt: "2025-11-28T13:45:00Z",
-      updatedAt: "2025-11-28T13:45:00Z"
+      createdAt: "2026-01-01T13:45:00Z",
+      updatedAt: "2026-01-01T13:45:00Z"
+    },
+    {
+      id: 8,
+      customer: "Frank Miller",
+      service: "Beard Trim & Shape",
+      barber: "Alex Rodriguez",
+      date: "2026-01-04",
+      time: "10:30 AM",
+      duration: "20 min",
+      price: 25,
+      status: "scheduled",
+      phone: "(555) 890-1234",
+      email: "frank.miller@email.com",
+      notes: "Weekly maintenance",
+      source: "website",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-03T08:15:00Z",
+      updatedAt: "2026-01-03T08:15:00Z"
+    },
+    {
+      id: 9,
+      customer: "Grace Taylor",
+      service: "Premium Package",
+      barber: "Mike Johnson",
+      date: "2026-01-04",
+      time: "3:00 PM",
+      duration: "60 min",
+      price: 85,
+      status: "scheduled",
+      phone: "(555) 901-2345",
+      email: "grace.taylor@email.com",
+      notes: "Birthday special request",
+      source: "mobile",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-02T19:30:00Z",
+      updatedAt: "2026-01-02T19:30:00Z"
+    },
+    {
+      id: 10,
+      customer: "Henry Wilson",
+      service: "Classic Haircut",
+      barber: "Sarah Chen",
+      date: "2026-01-05",
+      time: "11:00 AM",
+      duration: "30 min",
+      price: 35,
+      status: "scheduled",
+      phone: "(555) 012-3456",
+      email: "henry.wilson@email.com",
+      notes: "Student discount applied",
+      source: "website",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-04T14:20:00Z",
+      updatedAt: "2026-01-04T14:20:00Z"
+    },
+    {
+      id: 11,
+      customer: "Isabella Garcia",
+      service: "Haircut & Style",
+      barber: "Mike Johnson",
+      date: "2026-01-05",
+      time: "2:30 PM",
+      duration: "45 min",
+      price: 55,
+      status: "scheduled",
+      phone: "(555) 123-4567",
+      email: "isabella.garcia@email.com",
+      notes: "Special occasion styling",
+      source: "mobile",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-03T16:45:00Z",
+      updatedAt: "2026-01-03T16:45:00Z"
+    },
+    {
+      id: 12,
+      customer: "Jack Thompson",
+      service: "Beard Grooming",
+      barber: "Alex Rodriguez",
+      date: "2026-01-05",
+      time: "9:00 AM",
+      duration: "25 min",
+      price: 30,
+      status: "scheduled",
+      phone: "(555) 234-5678",
+      email: "jack.thompson@email.com",
+      notes: "Corporate client",
+      source: "website",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-04T11:10:00Z",
+      updatedAt: "2026-01-04T11:10:00Z"
+    },
+    {
+      id: 13,
+      customer: "Karen Martinez",
+      service: "Hair Color",
+      barber: "Sarah Chen",
+      date: "2026-01-06",
+      time: "10:00 AM",
+      duration: "90 min",
+      price: 120,
+      status: "scheduled",
+      phone: "(555) 345-6789",
+      email: "karen.martinez@email.com",
+      notes: "Balayage technique",
+      source: "mobile",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-01T09:30:00Z",
+      updatedAt: "2026-01-01T09:30:00Z"
+    },
+    {
+      id: 14,
+      customer: "Liam Anderson",
+      service: "Premium Package",
+      barber: "Mike Johnson",
+      date: "2026-01-06",
+      time: "1:30 PM",
+      duration: "60 min",
+      price: 85,
+      status: "scheduled",
+      phone: "(555) 456-7890",
+      email: "liam.anderson@email.com",
+      notes: "Executive grooming",
+      source: "website",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-05T13:15:00Z",
+      updatedAt: "2026-01-05T13:15:00Z"
+    },
+    {
+      id: 15,
+      customer: "Maya Johnson",
+      service: "Classic Haircut",
+      barber: "Alex Rodriguez",
+      date: "2026-01-06",
+      time: "4:00 PM",
+      duration: "30 min",
+      price: 35,
+      status: "scheduled",
+      phone: "(555) 567-8901",
+      email: "maya.johnson@email.com",
+      notes: "Quick trim appointment",
+      source: "mobile",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-05T17:20:00Z",
+      updatedAt: "2026-01-05T17:20:00Z"
+    },
+    {
+      id: 16,
+      customer: "Oliver Brown",
+      service: "Full Service Package",
+      barber: "Mike Johnson",
+      date: "2026-01-03",
+      time: "1:00 PM",
+      duration: "90 min",
+      price: 120,
+      status: "scheduled",
+      phone: "(555) 678-9012",
+      email: "oliver.brown@email.com",
+      notes: "Complete grooming session with multiple services",
+      source: "website",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-02T10:45:00Z",
+      updatedAt: "2026-01-02T10:45:00Z"
+    },
+    {
+      id: 17,
+      customer: "Sophia Davis",
+      service: "Hair Color & Cut",
+      barber: "Sarah Chen",
+      date: "2026-01-03",
+      time: "2:30 PM",
+      duration: "120 min",
+      price: 150,
+      status: "scheduled",
+      phone: "(555) 789-0123",
+      email: "sophia.davis@email.com",
+      notes: "Full color treatment with haircut",
+      source: "mobile",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-01T14:20:00Z",
+      updatedAt: "2026-01-01T14:20:00Z"
+    },
+    {
+      id: 18,
+      customer: "Ethan Wilson",
+      service: "Executive Grooming",
+      barber: "Mike Johnson",
+      date: "2026-01-04",
+      time: "9:00 AM",
+      duration: "75 min",
+      price: 95,
+      status: "scheduled",
+      phone: "(555) 890-1234",
+      email: "ethan.wilson@email.com",
+      notes: "VIP executive package",
+      source: "website",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-03T08:30:00Z",
+      updatedAt: "2026-01-03T08:30:00Z"
+    },
+    {
+      id: 19,
+      customer: "Ava Martinez",
+      service: "Bridal Package",
+      barber: "Sarah Chen",
+      date: "2026-01-04",
+      time: "11:00 AM",
+      duration: "150 min",
+      price: 200,
+      status: "scheduled",
+      phone: "(555) 901-2345",
+      email: "ava.martinez@email.com",
+      notes: "Special bridal preparation",
+      source: "mobile",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-02T16:15:00Z",
+      updatedAt: "2026-01-02T16:15:00Z"
+    },
+    {
+      id: 20,
+      customer: "Noah Garcia",
+      service: "Beard Sculpting",
+      barber: "Alex Rodriguez",
+      date: "2026-01-04",
+      time: "4:30 PM",
+      duration: "45 min",
+      price: 40,
+      status: "scheduled",
+      phone: "(555) 012-3456",
+      email: "noah.garcia@email.com",
+      notes: "Detailed beard sculpting session",
+      source: "website",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-03T15:45:00Z",
+      updatedAt: "2026-01-03T15:45:00Z"
+    },
+    {
+      id: 21,
+      customer: "Isabella Rodriguez",
+      service: "Hair Treatment",
+      barber: "Sarah Chen",
+      date: "2026-01-05",
+      time: "10:00 AM",
+      duration: "60 min",
+      price: 80,
+      status: "scheduled",
+      phone: "(555) 123-4567",
+      email: "isabella.rodriguez@email.com",
+      notes: "Deep conditioning treatment",
+      source: "mobile",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-04T09:30:00Z",
+      updatedAt: "2026-01-04T09:30:00Z"
+    },
+    {
+      id: 22,
+      customer: "Mason Lee",
+      service: "Premium Shave",
+      barber: "Mike Johnson",
+      date: "2026-01-05",
+      time: "3:00 PM",
+      duration: "45 min",
+      price: 50,
+      status: "scheduled",
+      phone: "(555) 234-5678",
+      email: "mason.lee@email.com",
+      notes: "Traditional hot towel shave",
+      source: "website",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-04T14:20:00Z",
+      updatedAt: "2026-01-04T14:20:00Z"
+    },
+    {
+      id: 23,
+      customer: "Harper Taylor",
+      service: "Color Correction",
+      barber: "Sarah Chen",
+      date: "2026-01-06",
+      time: "9:30 AM",
+      duration: "180 min",
+      price: 250,
+      status: "scheduled",
+      phone: "(555) 345-6789",
+      email: "harper.taylor@email.com",
+      notes: "Complex color correction session",
+      source: "mobile",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-03T11:00:00Z",
+      updatedAt: "2026-01-03T11:00:00Z"
+    },
+    {
+      id: 24,
+      customer: "Lucas Anderson",
+      service: "Gentleman Package",
+      barber: "Alex Rodriguez",
+      date: "2026-01-06",
+      time: "2:00 PM",
+      duration: "90 min",
+      price: 110,
+      status: "scheduled",
+      phone: "(555) 456-7890",
+      email: "lucas.anderson@email.com",
+      notes: "Complete gentleman grooming",
+      source: "website",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-05T13:45:00Z",
+      updatedAt: "2026-01-05T13:45:00Z"
+    },
+    {
+      id: 25,
+      customer: "Ella Thompson",
+      service: "Hair Extensions",
+      barber: "Sarah Chen",
+      date: "2026-01-07",
+      time: "10:00 AM",
+      duration: "120 min",
+      price: 180,
+      status: "scheduled",
+      phone: "(555) 567-8901",
+      email: "ella.thompson@email.com",
+      notes: "Hair extension installation",
+      source: "mobile",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-04T16:30:00Z",
+      updatedAt: "2026-01-04T16:30:00Z"
+    },
+    {
+      id: 26,
+      customer: "James Wilson",
+      service: "Classic Haircut",
+      barber: "Alex Rodriguez",
+      date: "2026-01-03",
+      time: "11:30 AM",
+      duration: "30 min",
+      price: 35,
+      status: "scheduled",
+      phone: "(555) 678-9012",
+      email: "james.wilson@email.com",
+      notes: "Regular trim",
+      source: "website",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-02T09:00:00Z",
+      updatedAt: "2026-01-02T09:00:00Z"
+    },
+    {
+      id: 27,
+      customer: "William Taylor",
+      service: "Beard Trim & Shape",
+      barber: "Sarah Chen",
+      date: "2026-01-03",
+      time: "10:00 AM",
+      duration: "30 min",
+      price: 25,
+      status: "scheduled",
+      phone: "(555) 789-0123",
+      email: "william.taylor@email.com",
+      notes: "Beard shaping",
+      source: "mobile",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-02T10:30:00Z",
+      updatedAt: "2026-01-02T10:30:00Z"
+    },
+    {
+      id: 28,
+      customer: "Benjamin Moore",
+      service: "Premium Package",
+      barber: "Alex Rodriguez",
+      date: "2026-01-03",
+      time: "1:00 PM",
+      duration: "60 min",
+      price: 85,
+      status: "scheduled",
+      phone: "(555) 890-1234",
+      email: "benjamin.moore@email.com",
+      notes: "Full package",
+      source: "website",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-02T11:00:00Z",
+      updatedAt: "2026-01-02T11:00:00Z"
+    },
+    {
+      id: 29,
+      customer: "Lucas White",
+      service: "Haircut & Style",
+      barber: "Mike Johnson",
+      date: "2026-01-03",
+      time: "4:00 PM",
+      duration: "45 min",
+      price: 55,
+      status: "scheduled",
+      phone: "(555) 901-2345",
+      email: "lucas.white@email.com",
+      notes: "Style for event",
+      source: "mobile",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-02T12:00:00Z",
+      updatedAt: "2026-01-02T12:00:00Z"
+    },
+    {
+      id: 30,
+      customer: "Henry Harris",
+      service: "Beard Grooming",
+      barber: "Sarah Chen",
+      date: "2026-01-03",
+      time: "4:30 PM",
+      duration: "30 min",
+      price: 30,
+      status: "scheduled",
+      phone: "(555) 012-3456",
+      email: "henry.harris@email.com",
+      notes: "Quick groom",
+      source: "website",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-02T13:00:00Z",
+      updatedAt: "2026-01-02T13:00:00Z"
     }
   ];
 
@@ -323,7 +875,35 @@ export default function AdminAppointments() {
     }
   };
 
-  const filteredAppointments = appointments.filter(appointment => {
+  // Get confirmed bookings and combine with mock appointments
+  const confirmedBookings = getConfirmedBookings();
+  const convertedBookings = confirmedBookings.map((booking, index) => ({
+    id: index + 1000,
+    customer: booking.customerName,
+    service: booking.services.map(s => s.serviceName).join(', '),
+    barber: booking.staffMember,
+    date: booking.date,
+    time: booking.time,
+    duration: booking.services.reduce((sum, s) => {
+      const durationStr = s.duration || '0';
+      const minutes = parseInt(durationStr.toString().split(' ')[0]);
+      return sum + minutes;
+    }, 0) + ' min',
+    price: booking.totalPrice,
+    status: 'scheduled' as const,
+    phone: booking.customerPhone,
+    email: booking.customerEmail,
+    notes: booking.specialRequests || 'Booked via website',
+    source: 'website' as const,
+    branch: 'All Branches',
+    createdAt: booking.createdAt,
+    updatedAt: booking.createdAt
+  }));
+
+  // Combine mock and confirmed appointments
+  const allAppointments = [...appointments, ...convertedBookings];
+
+  const filteredAppointments = allAppointments.filter(appointment => {
     const matchesStatus = statusFilter === 'all' || appointment.status === statusFilter;
     const matchesSearch = appointment.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          appointment.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -334,7 +914,7 @@ export default function AdminAppointments() {
 
   const getAppointmentsForDate = (date: Date) => {
     const dateString = date.toISOString().split('T')[0];
-    return appointments.filter(apt => apt.date === dateString);
+    return allAppointments.filter(apt => apt.date === dateString);
   };
 
   const handleCreateBooking = (barber: string, date: string, time: string) => {
@@ -344,12 +924,17 @@ export default function AdminAppointments() {
       email: '',
       service: '',
       barber: barber,
+      teamMembers: [{name: barber, tip: 0}],
       date: date,
       time: time,
       notes: '',
       products: [],
       tax: 5,
       serviceCharges: 0,
+      discount: 0,
+      discountType: 'fixed',
+      serviceTip: 0,
+      paymentMethods: [],
       status: 'pending',
       generateInvoice: false
     });
@@ -385,12 +970,17 @@ export default function AdminAppointments() {
       email: '',
       service: '',
       barber: '',
+      teamMembers: [],
       date: '',
       time: '',
       notes: '',
       products: [],
       tax: 5,
       serviceCharges: 0,
+      discount: 0,
+      discountType: 'fixed',
+      serviceTip: 0,
+      paymentMethods: [],
       status: 'pending',
       generateInvoice: false
     });
@@ -411,6 +1001,63 @@ export default function AdminAppointments() {
     // For demo purposes, we'll just log it
   };
 
+  const handleGenerateInvoice = (appointment: any) => {
+    const branch = getBranchByName(appointment.branch);
+    if (!branch) {
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Branch details not found. Please configure branch in settings.'
+      });
+      return;
+    }
+
+    const newInvoiceNumber = generateInvoiceNumber();
+    setInvoiceNumber(newInvoiceNumber);
+    setSelectedAppointmentForInvoice(appointment);
+    setShowInvoiceModal(true);
+  };
+
+  const handleApprove = (appointmentId: number) => {
+    const updatedAppointments = appointments.map(apt =>
+      apt.id === appointmentId ? { ...apt, status: 'approved', updatedAt: new Date().toISOString() } : apt
+    );
+    addNotification({
+      type: 'success',
+      title: 'Booking Approved',
+      message: 'Appointment has been approved and confirmed.'
+    });
+  };
+
+  const handleReject = (appointmentId: number) => {
+    const updatedAppointments = appointments.map(apt =>
+      apt.id === appointmentId ? { ...apt, status: 'rejected', updatedAt: new Date().toISOString() } : apt
+    );
+    addNotification({
+      type: 'error',
+      title: 'Booking Rejected',
+      message: 'Appointment has been rejected.'
+    });
+  };
+
+  const handleReschedule = (appointmentId: number) => {
+    const appointment = allAppointments.find(apt => apt.id === appointmentId);
+    if (!appointment) return;
+
+    setSelectedAppointment(appointment);
+    setShowAppointmentDetails(true);
+    addNotification({
+      type: 'info',
+      title: 'Reschedule Mode',
+      message: 'Please select a new date and time for this appointment.'
+    });
+  };
+
+  // Filter pending appointments for approval view
+  const pendingAppointments = allAppointments.filter(apt =>
+    apt.status === 'pending' || apt.status === 'approved' || apt.status === 'rejected' || apt.status === 'rescheduled'
+  );
+
   const unreadNotifications = notifications.filter(n => !n.read).length;
 
   return (
@@ -430,7 +1077,7 @@ export default function AdminAppointments() {
           sidebarOpen ? "lg:ml-0" : "lg:ml-1"
         )}>
           {/* Header */}
-          <header className="bg-white shadow-sm border-b flex-shrink-0">
+          <header className="bg-white shadow-sm border-b shrink-0">
             <div className="flex items-center justify-between px-4 py-4 lg:px-8">
               <div className="flex items-center gap-4">
                 <AdminMobileSidebar
@@ -483,7 +1130,7 @@ export default function AdminAppointments() {
                             onClick={() => markAsRead(notification.id)}
                           >
                             <div className="flex items-start gap-3">
-                              <div className="flex-shrink-0 mt-1">
+                              <div className="shrink-0 mt-1">
                                 {getIcon(notification.type)}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -534,12 +1181,14 @@ export default function AdminAppointments() {
           {/* Content */}
           <div className="flex-1 overflow-auto min-h-0">
             <div className="h-full p-4 lg:p-8">
-              <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'calendar' | 'advanced-calendar' | 'list')}>
+              <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'calendar' | 'advanced-calendar' | 'list' | 'approvals' | 'product-orders')}>
                 <div className="flex items-center justify-between mb-6">
                   <TabsList>
                     <TabsTrigger value="calendar">Calendar View</TabsTrigger>
                     <TabsTrigger value="advanced-calendar">Advanced Calendar</TabsTrigger>
                     <TabsTrigger value="list">List View</TabsTrigger>
+                    <TabsTrigger value="approvals">Booking Approvals</TabsTrigger>
+                    <TabsTrigger value="product-orders">Product Orders</TabsTrigger>
                   </TabsList>
 
                   <div className="flex items-center gap-4">
@@ -570,9 +1219,9 @@ export default function AdminAppointments() {
                 </div>
 
                 <TabsContent value="calendar" className="space-y-6">
-                  <div className="flex justify-between items-center mb-4">
+                  <div className="flex justify-between items-center mb-6">
                     <div></div>
-                    <Button onClick={() => setShowBookingDialog(true)} className="flex items-center gap-2">
+                    <Button onClick={() => setShowBookingDialog(true)} className="flex items-center gap-2 bg-primary hover:bg-primary/90">
                       <Plus className="w-4 h-4" />
                       Create Booking
                     </Button>
@@ -580,8 +1229,8 @@ export default function AdminAppointments() {
                   <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
                     {/* Calendar */}
                     <div className="lg:col-span-2">
-                      <Card className="border-2 shadow-sm">
-                        <CardHeader className="pb-4 border-b bg-gray-50/50">
+                      <Card className="border-2 shadow-lg bg-white/50 backdrop-blur-sm">
+                        <CardHeader className="pb-4 border-b bg-gradient-to-r from-primary/5 to-secondary/5">
                           <CardTitle className="flex items-center gap-3 text-xl">
                             <Calendar className="w-6 h-6 text-primary" />
                             Booking Calendar
@@ -595,7 +1244,7 @@ export default function AdminAppointments() {
                             mode="single"
                             selected={selectedDate}
                             onSelect={setSelectedDate}
-                            className="rounded-lg border-2 shadow-sm w-full"
+                            className="rounded-lg border-2 shadow-sm w-full bg-white"
                             modifiers={{
                               hasAppointments: (date) => getAppointmentsForDate(date).length > 0
                             }}
@@ -604,17 +1253,56 @@ export default function AdminAppointments() {
                                 backgroundColor: 'rgb(59 130 246 / 0.15)',
                                 color: 'rgb(59 130 246)',
                                 fontWeight: '600',
-                                borderRadius: '6px'
+                                borderRadius: '8px',
+                                border: '2px solid rgb(59 130 246 / 0.3)'
+                              },
+                              today: {
+                                backgroundColor: 'rgb(251 146 60 / 0.1)',
+                                color: 'rgb(251 146 60)',
+                                fontWeight: '600',
+                                border: '2px solid rgb(251 146 60 / 0.3)'
                               }
                             }}
+                            classNames={{
+                              months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                              month: "space-y-4",
+                              caption: "flex justify-center pt-1 relative items-center",
+                              caption_label: "text-sm font-medium",
+                              nav: "space-x-1 flex items-center",
+                              nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+                              nav_button_previous: "absolute left-1",
+                              nav_button_next: "absolute right-1",
+                              table: "w-full border-collapse space-y-1",
+                              head_row: "flex",
+                              head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
+                              row: "flex w-full mt-2",
+                              cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                              day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground rounded-md transition-colors",
+                              day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                              day_today: "bg-accent text-accent-foreground",
+                              day_outside: "text-muted-foreground opacity-50",
+                              day_disabled: "text-muted-foreground opacity-50",
+                              day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                              day_hidden: "invisible",
+                            }}
                           />
+                          <div className="mt-4 flex flex-wrap gap-4 text-xs">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 bg-blue-500/20 border-2 border-blue-500/50 rounded"></div>
+                              <span>Has Appointments</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 bg-orange-500/20 border-2 border-orange-500/50 rounded"></div>
+                              <span>Today</span>
+                            </div>
+                          </div>
                         </CardContent>
                       </Card>
                     </div>
 
                     {/* Selected Date Appointments Sidebar */}
                     <div className="lg:col-span-2">
-                      <Card className="border-2 shadow-sm h-fit sticky top-6">
+                      <Card className="border-2 shadow-lg bg-white/50 backdrop-blur-sm h-fit sticky top-6">
                         <CardHeader className="pb-4 border-b bg-gradient-to-r from-primary/5 to-secondary/5">
                           <CardTitle className="text-lg lg:text-xl flex items-center gap-3">
                             <Clock className="w-6 h-6 text-primary" />
@@ -627,11 +1315,14 @@ export default function AdminAppointments() {
                           </CardTitle>
                           <CardDescription className="text-base font-medium">
                             {selectedDate ? (
-                              <span className="flex items-center gap-2">
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-primary/10 text-primary">
+                              <div className="flex items-center gap-3">
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-primary/10 text-primary border border-primary/20">
                                   {getAppointmentsForDate(selectedDate).length} appointment(s)
                                 </span>
-                              </span>
+                                <span className="text-sm text-muted-foreground">
+                                  {getAppointmentsForDate(selectedDate).filter(apt => apt.status === 'completed').length} completed
+                                </span>
+                              </div>
                             ) : 'Choose a date from the calendar'}
                           </CardDescription>
                         </CardHeader>
@@ -641,54 +1332,74 @@ export default function AdminAppointments() {
                               {getAppointmentsForDate(selectedDate).map((appointment) => (
                                 <div
                                   key={appointment.id}
-                                  className="group p-4 border-2 border-gray-100 rounded-xl cursor-pointer hover:border-primary/30 hover:shadow-md transition-all duration-200 bg-white"
+                                  className="group p-5 border-2 border-gray-100 rounded-2xl cursor-pointer hover:border-primary/30 hover:shadow-xl transition-all duration-300 bg-white hover:bg-gradient-to-r hover:from-primary/5 hover:to-secondary/5"
                                   onClick={() => handleAppointmentClick(appointment)}
                                 >
-                                  <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                                        <User className="w-5 h-5 text-primary" />
+                                  <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-4">
+                                      <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                                        <User className="w-6 h-6 text-primary" />
                                       </div>
                                       <div>
-                                        <span className="font-semibold text-base text-gray-900">{appointment.time}</span>
-                                        <div className={`flex items-center gap-1 mt-1 ${getSourceColor(appointment.source)}`}>
+                                        <span className="font-semibold text-base text-gray-900 group-hover:text-primary transition-colors">{appointment.time}</span>
+                                        <div className={`flex items-center gap-2 mt-1 ${getSourceColor(appointment.source)}`}>
                                           {getSourceIcon(appointment.source)}
-                                          <span className="text-xs font-medium capitalize">{appointment.source}</span>
+                                          <span className="text-xs font-medium capitalize px-2 py-1 rounded-full bg-current/10">{appointment.source}</span>
                                         </div>
                                       </div>
                                     </div>
-                                    <Badge className={`${getStatusColor(appointment.status)} border-2 text-xs font-semibold px-3 py-1`}>
+                                    <Badge className={`${getStatusColor(appointment.status)} border-2 text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm`}>
                                       {appointment.status}
                                     </Badge>
                                   </div>
-                                  <div className="space-y-2">
-                                    <p className="font-semibold text-gray-900 text-base">{appointment.customer}</p>
-                                    <p className="text-gray-700 text-sm font-medium">{appointment.service}</p>
-                                    <div className="flex items-center justify-between">
-                                      <p className="text-gray-600 text-sm">with {appointment.barber}</p>
-                                      <span className="text-sm font-semibold text-primary">{formatCurrency(appointment.price)}</span>
+                                  <div className="space-y-3">
+                                    <div>
+                                      <p className="font-bold text-gray-900 text-lg group-hover:text-primary transition-colors">{appointment.customer}</p>
+                                      <p className="text-gray-700 text-sm font-medium">{appointment.service}</p>
                                     </div>
+                                    <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                                      <p className="text-gray-600 text-sm flex items-center gap-2">
+                                        <Scissors className="w-4 h-4 text-secondary" />
+                                        with {appointment.barber}
+                                      </p>
+                                      <span className="text-lg font-bold text-primary">{formatCurrency(appointment.price)}</span>
+                                    </div>
+                                    {appointment.notes && (
+                                      <div className="bg-gray-50 rounded-lg p-3 mt-3">
+                                        <p className="text-xs text-gray-600 italic">"{appointment.notes}"</p>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               ))}
                               {getAppointmentsForDate(selectedDate).length === 0 && (
-                                <div className="text-center py-12 px-6">
-                                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Calendar className="w-8 h-8 text-gray-400" />
+                                <div className="text-center py-16 px-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-3xl border-2 border-dashed border-gray-200">
+                                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                                    <Calendar className="w-10 h-10 text-gray-400" />
                                   </div>
-                                  <h3 className="text-lg font-semibold text-gray-600 mb-2">No appointments</h3>
-                                  <p className="text-gray-500 text-sm">No appointments scheduled for this date</p>
+                                  <h3 className="text-xl font-bold text-gray-600 mb-2">No appointments</h3>
+                                  <p className="text-gray-500 text-sm mb-6 max-w-xs mx-auto">No appointments scheduled for this date. Click "Create Booking" to add one.</p>
+                                  <Button 
+                                    onClick={() => setShowBookingDialog(true)}
+                                    className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-full"
+                                  >
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Create Booking
+                                  </Button>
                                 </div>
                               )}
                             </div>
                           )}
                           {!selectedDate && (
-                            <div className="text-center py-12 px-6">
-                              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Calendar className="w-8 h-8 text-primary" />
+                            <div className="text-center py-16 px-6 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-3xl border-2 border-dashed border-primary/20">
+                              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                                <Calendar className="w-10 h-10 text-primary" />
                               </div>
-                              <h3 className="text-lg font-semibold text-gray-600 mb-2">Select a date</h3>
-                              <p className="text-gray-500 text-sm">Choose a date from the calendar to view appointments</p>
+                              <h3 className="text-xl font-bold text-gray-600 mb-2">Select a date</h3>
+                              <p className="text-gray-500 text-sm mb-6 max-w-xs mx-auto">Choose a date from the calendar to view appointments and manage bookings.</p>
+                              <div className="text-xs text-muted-foreground">
+                                💡 Tip: Dates with appointments are highlighted in blue
+                              </div>
                             </div>
                           )}
                         </CardContent>
@@ -711,7 +1422,7 @@ export default function AdminAppointments() {
                   <div className="space-y-6">
                     {filteredAppointments.map((appointment) => (
                       <Card key={appointment.id} className="border-2 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-                        <CardHeader className="pb-4 border-b bg-gradient-to-r from-gray-50/50 to-white">
+                        <CardHeader className="pb-4 border-b bg-linear-to-r from-gray-50/50 to-white">
                           <div className="flex items-start justify-between">
                             <div className="flex items-start gap-6">
                               <div className="w-14 h-14 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
@@ -877,6 +1588,7 @@ export default function AdminAppointments() {
                                   <Button
                                     size="sm"
                                     variant="outline"
+                                    onClick={() => handleGenerateInvoice(appointment)}
                                     className="flex items-center gap-2 text-blue-600 hover:text-white hover:bg-blue-600 border-blue-300 border-2 transition-colors"
                                   >
                                     <Receipt className="w-4 h-4" />
@@ -944,6 +1656,324 @@ export default function AdminAppointments() {
                     </div>
                   )}
                 </TabsContent>
+
+                {/* Booking Approvals Tab */}
+                <TabsContent value="approvals" className="space-y-6">
+                  <div className="space-y-4">
+                    {pendingAppointments.length === 0 ? (
+                      <div className="text-center py-16 px-8">
+                        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                          <CheckCircle className="w-10 h-10 text-green-500" />
+                        </div>
+                        <h3 className="text-2xl font-semibold text-gray-600 mb-3">All caught up!</h3>
+                        <p className="text-gray-500 text-lg">No pending approvals at the moment</p>
+                      </div>
+                    ) : (
+                      pendingAppointments.map((appointment) => (
+                        <Card key={appointment.id} className="border-l-4 border-l-orange-500 shadow-sm hover:shadow-md transition-all">
+                          <CardContent className="p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                              {/* Customer & Service Info */}
+                              <div className="md:col-span-3">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center">
+                                    <User className="w-5 h-5 text-primary" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="font-semibold text-gray-900 text-sm">{appointment.customer}</p>
+                                    <p className="text-xs text-gray-600 truncate">{appointment.service}</p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Date & Time */}
+                              <div className="md:col-span-2">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Calendar className="w-4 h-4 text-blue-600" />
+                                  <div>
+                                    <p className="font-medium text-gray-900">{appointment.date}</p>
+                                    <p className="text-xs text-gray-600">{appointment.time}</p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Duration */}
+                              <div className="md:col-span-1">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Clock className="w-4 h-4 text-green-600" />
+                                  <span className="font-medium text-gray-900">{appointment.duration}</span>
+                                </div>
+                              </div>
+
+                              {/* Price */}
+                              <div className="md:col-span-1">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <DollarSign className="w-4 h-4 text-purple-600" />
+                                  <span className="font-medium text-gray-900">{formatCurrency(appointment.price)}</span>
+                                </div>
+                              </div>
+
+                              {/* Status Badge */}
+                              <div className="md:col-span-2">
+                                <Badge className={`${getStatusColor(appointment.status)} border flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold w-full`}>
+                                  {getStatusIcon(appointment.status)}
+                                  <span className="capitalize">{appointment.status}</span>
+                                </Badge>
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="md:col-span-3 flex gap-2 flex-wrap">
+                                {appointment.status === 'pending' && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      className="bg-green-600 hover:bg-green-700 text-white flex-1 text-xs h-9 flex items-center justify-center gap-1"
+                                      onClick={() => handleApprove(appointment.id)}
+                                    >
+                                      <CheckCircle className="w-3 h-3" />
+                                      Approve
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      className="bg-red-600 hover:bg-red-700 text-white flex-1 text-xs h-9 flex items-center justify-center gap-1"
+                                      onClick={() => handleReject(appointment.id)}
+                                    >
+                                      <XCircle className="w-3 h-3" />
+                                      Reject
+                                    </Button>
+                                  </>
+                                )}
+                                {appointment.status === 'approved' && (
+                                  <Button
+                                    size="sm"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white flex-1 text-xs h-9 flex items-center justify-center gap-1"
+                                    onClick={() => handleReschedule(appointment.id)}
+                                  >
+                                    <RefreshCw className="w-3 h-3" />
+                                    Reschedule
+                                  </Button>
+                                )}
+                                {appointment.status === 'rejected' && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-2 border-red-300 text-red-600 flex-1 text-xs h-9 cursor-not-allowed opacity-60"
+                                    disabled
+                                  >
+                                    Rejected
+                                  </Button>
+                                )}
+                                {appointment.status === 'rescheduled' && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      className="bg-green-600 hover:bg-green-700 text-white flex-1 text-xs h-9 flex items-center justify-center gap-1"
+                                      onClick={() => handleApprove(appointment.id)}
+                                    >
+                                      <CheckCircle className="w-3 h-3" />
+                                      Confirm
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      className="bg-red-600 hover:bg-red-700 text-white flex-1 text-xs h-9 flex items-center justify-center gap-1"
+                                      onClick={() => handleReject(appointment.id)}
+                                    >
+                                      <XCircle className="w-3 h-3" />
+                                      Deny
+                                    </Button>
+                                  </>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-2 flex-1 text-xs h-9"
+                                  onClick={() => handleAppointmentClick(appointment)}
+                                >
+                                  <Eye className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* Product Orders Tab */}
+                <TabsContent value="product-orders" className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">Product Orders</h2>
+                      <p className="text-gray-600 mt-1">Manage product sales and inventory</p>
+                    </div>
+                    <Button className="bg-blue-600 hover:bg-blue-700">
+                      <Plus className="w-4 h-4 mr-2" />
+                      New Order
+                    </Button>
+                  </div>
+
+                  {/* Product Orders Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <Package className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600">Total Orders</p>
+                          <p className="text-2xl font-bold text-gray-900">24</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <DollarSign className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600">Revenue</p>
+                          <p className="text-2xl font-bold text-gray-900">{formatCurrency(3240)}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600">Completed</p>
+                          <p className="text-2xl font-bold text-gray-900">18</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <AlertCircle className="w-8 h-8 text-amber-600 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600">Pending</p>
+                          <p className="text-2xl font-bold text-gray-900">6</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Product Orders Table */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recent Orders</CardTitle>
+                      <CardDescription>Track all product orders and sales</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {productOrders.map((order) => (
+                          <div key={order.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                  <Package className="w-5 h-5 text-blue-600" />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="font-semibold text-gray-900">{order.id}</p>
+                                  <p className="text-sm text-gray-600">{order.customer}</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex-1 text-center">
+                              <p className="text-sm text-gray-600">Products</p>
+                              <p className="font-semibold text-gray-900 text-sm">{order.products.join(', ')}</p>
+                            </div>
+                            <div className="flex-1 text-center">
+                              <p className="text-sm text-gray-600">Qty</p>
+                              <p className="font-semibold text-gray-900">{order.quantity}</p>
+                            </div>
+                            <div className="flex-1 text-center">
+                              <p className="text-sm text-gray-600">Total</p>
+                              <p className="font-semibold text-lg text-gray-900">{formatCurrency(order.total)}</p>
+                            </div>
+                            <div className="flex-1 text-center">
+                              <Badge className={cn(
+                                order.status === 'delivered' && 'bg-green-100 text-green-800',
+                                order.status === 'approved' && 'bg-blue-100 text-blue-800',
+                                order.status === 'rejected' && 'bg-red-100 text-red-800',
+                                order.status === 'pending' && 'bg-yellow-100 text-yellow-800'
+                              )}>
+                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {order.status !== 'delivered' && (
+                                <>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    title="Mark as Delivered"
+                                    onClick={() => handleOrderStatusChange(order.id, 'delivered')}
+                                    className="hover:bg-green-100 hover:text-green-700"
+                                  >
+                                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    title="Approve Order"
+                                    onClick={() => handleOrderStatusChange(order.id, 'approved')}
+                                    className="hover:bg-blue-100 hover:text-blue-700"
+                                  >
+                                    <CheckCircle className="w-4 h-4 text-blue-600" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    title="Reject Order"
+                                    onClick={() => handleOrderStatusChange(order.id, 'rejected')}
+                                    className="hover:bg-red-100 hover:text-red-700"
+                                  >
+                                    <XCircle className="w-4 h-4 text-red-600" />
+                                  </Button>
+                                </>
+                              )}
+                              {allowPendingOrders && order.status !== 'pending' && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  title="Mark as Pending"
+                                  onClick={() => handleOrderStatusChange(order.id, 'pending')}
+                                  className="hover:bg-yellow-100 hover:text-yellow-700"
+                                >
+                                  <AlertCircle className="w-4 h-4 text-yellow-600" />
+                                </Button>
+                              )}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreVertical className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    View Details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    Edit Order
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <Download className="w-4 h-4 mr-2" />
+                                    Download Invoice
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => handleDeleteOrder(order.id)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Delete Order
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
               </Tabs>
             </div>
           </div>
@@ -953,7 +1983,7 @@ export default function AdminAppointments() {
       {/* Appointment Details Sheet */}
       <Sheet open={showAppointmentDetails} onOpenChange={setShowAppointmentDetails}>
         <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-          <SheetHeader className="border-b-2 pb-6 mb-8 bg-gradient-to-r from-primary/5 to-secondary/5 -mx-6 -mt-6 px-6 pt-6 rounded-t-lg">
+          <SheetHeader className="border-b-2 pb-6 mb-8 bg-linear-to-r from-primary/5 to-secondary/5 -mx-6 -mt-6 px-6 pt-6 rounded-t-lg">
             <SheetTitle className="flex items-center gap-3 text-2xl">
               <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                 <Calendar className="w-6 h-6 text-primary" />
@@ -974,7 +2004,7 @@ export default function AdminAppointments() {
           {selectedAppointment && (
             <div className="space-y-8">
               {/* Status Overview */}
-              <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl">
+              <div className="p-6 bg-linear-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-blue-900 flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5" />
@@ -1288,10 +2318,19 @@ export default function AdminAppointments() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Barber *</label>
-                  <Select value={bookingData.barber} onValueChange={(value) => setBookingData({...bookingData, barber: value})}>
+                  <label className="text-sm font-medium text-gray-700">Primary Team Member *</label>
+                  <Select value={bookingData.barber} onValueChange={(value) => {
+                    setBookingData({...bookingData, barber: value});
+                    // Add to team members if not already there
+                    if (!bookingData.teamMembers.some(tm => tm.name === value)) {
+                      setBookingData(prev => ({
+                        ...prev,
+                        teamMembers: [...prev.teamMembers, {name: value, tip: 0}]
+                      }));
+                    }
+                  }}>
                     <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Select a barber" />
+                      <SelectValue placeholder="Select a team member" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Mike Johnson">
@@ -1360,6 +2399,74 @@ export default function AdminAppointments() {
                     </div>
                   )}
                 </div>
+
+                {/* Additional Team Members */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Additional Team Members</label>
+                  <Select onValueChange={(value) => {
+                    if (value && !bookingData.teamMembers.some(tm => tm.name === value)) {
+                      setBookingData(prev => ({
+                        ...prev,
+                        teamMembers: [...prev.teamMembers, {name: value, tip: 0}]
+                      }));
+                    }
+                  }}>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Add more team members" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Mike Johnson">Mike Johnson</SelectItem>
+                      <SelectItem value="Alex Rodriguez">Alex Rodriguez</SelectItem>
+                      <SelectItem value="Sarah Chen">Sarah Chen</SelectItem>
+                      <SelectItem value="David Kim">David Kim</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Team Members List with Tips */}
+                {bookingData.teamMembers.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Team Members & Their Tips</label>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {bookingData.teamMembers.map((member, index) => (
+                        <div key={index} className="flex items-center gap-2 p-3 bg-white rounded border">
+                          <User className="w-4 h-4 text-gray-500" />
+                          <span className="flex-1 text-sm font-medium">{member.name}</span>
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-gray-600">Tip:</label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={member.tip}
+                              onChange={(e) => {
+                                const newMembers = [...bookingData.teamMembers];
+                                newMembers[index].tip = parseFloat(e.target.value) || 0;
+                                setBookingData({...bookingData, teamMembers: newMembers});
+                              }}
+                              placeholder="$0.00"
+                              className="h-9 w-24 text-right"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setBookingData(prev => ({
+                                ...prev,
+                                teamMembers: prev.teamMembers.filter((_, i) => i !== index),
+                                barber: index === 0 && prev.teamMembers.length > 1 ? prev.teamMembers[1].name : prev.barber
+                              }));
+                            }}
+                          >
+                            <XCircle className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1468,6 +2575,43 @@ export default function AdminAppointments() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Discount Amount</label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={bookingData.discount}
+                      onChange={(e) => setBookingData({...bookingData, discount: parseFloat(e.target.value) || 0})}
+                      placeholder="0.00"
+                      className="h-11 flex-1"
+                    />
+                    <Select value={bookingData.discountType} onValueChange={(value) => setBookingData({...bookingData, discountType: value as 'fixed' | 'percentage'})}>
+                      <SelectTrigger className="h-11 w-24">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fixed">$ Fixed</SelectItem>
+                        <SelectItem value="percentage">% Percent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Service Tips ($)</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={bookingData.serviceTip}
+                    onChange={(e) => setBookingData({...bookingData, serviceTip: parseFloat(e.target.value) || 0})}
+                    placeholder="0.00"
+                    className="h-11"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Tax (%)</label>
                   <Input
                     type="number"
@@ -1479,6 +2623,7 @@ export default function AdminAppointments() {
                     className="h-11"
                   />
                 </div>
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Service Charges ($)</label>
                   <Input
@@ -1490,6 +2635,39 @@ export default function AdminAppointments() {
                     className="h-11"
                   />
                 </div>
+              </div>
+
+              {/* Payment Methods */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-gray-700">Payment Methods</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {['cash', 'card', 'check', 'digital'].map((method) => (
+                    <div key={method} className="flex items-center space-x-2 p-2 rounded border cursor-pointer hover:bg-blue-50" onClick={() => {
+                      setBookingData(prev => ({
+                        ...prev,
+                        paymentMethods: prev.paymentMethods.includes(method as any)
+                          ? prev.paymentMethods.filter(m => m !== method)
+                          : [...prev.paymentMethods, method as any]
+                      }));
+                    }}>
+                      <input
+                        type="checkbox"
+                        id={`method-${method}`}
+                        checked={bookingData.paymentMethods.includes(method as any)}
+                        onChange={() => {}}
+                        className="w-4 h-4"
+                      />
+                      <label htmlFor={`method-${method}`} className="text-sm font-medium cursor-pointer capitalize">
+                        {method}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                {bookingData.paymentMethods.length > 0 && (
+                  <div className="text-xs text-gray-600 mt-2">
+                    Selected: {bookingData.paymentMethods.map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(', ')}
+                  </div>
+                )}
               </div>
 
               {/* Price Summary */}
@@ -1508,6 +2686,25 @@ export default function AdminAppointments() {
                     <span>Service Charges:</span>
                     <span>{formatCurrency(bookingData.serviceCharges)}</span>
                   </div>
+                  
+                  {/* Discount Line */}
+                  {bookingData.discount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount ({bookingData.discountType === 'percentage' ? bookingData.discount + '%' : 'Fixed'}):</span>
+                      <span>-{formatCurrency(bookingData.discountType === 'percentage' 
+                        ? (getServicePrice(bookingData.service) + bookingData.products.reduce((sum, p) => sum + (p.price * p.quantity), 0)) * (bookingData.discount / 100)
+                        : bookingData.discount)}</span>
+                    </div>
+                  )}
+
+                  {/* Tips Line */}
+                  {(bookingData.serviceTip > 0 || bookingData.teamMembers.some(tm => tm.tip > 0)) && (
+                    <div className="flex justify-between text-blue-600">
+                      <span>Tips (Service + Team):</span>
+                      <span>{formatCurrency(bookingData.serviceTip + bookingData.teamMembers.reduce((sum, tm) => sum + tm.tip, 0))}</span>
+                    </div>
+                  )}
+
                   <div className="flex justify-between">
                     <span>Tax ({bookingData.tax}%):</span>
                     <span>{formatCurrency(parseFloat(calculateTax()))}</span>
@@ -1516,6 +2713,20 @@ export default function AdminAppointments() {
                     <span>Total:</span>
                     <span>{formatCurrency(parseFloat(calculateTotal()))}</span>
                   </div>
+
+                  {/* Payment Methods Display */}
+                  {bookingData.paymentMethods.length > 0 && (
+                    <div className="border-t pt-2 mt-3">
+                      <div className="text-xs font-medium text-gray-600 mb-2">Payment Methods:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {bookingData.paymentMethods.map(method => (
+                          <span key={method} className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium capitalize">
+                            {method}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1652,6 +2863,83 @@ export default function AdminAppointments() {
               Create Booking
             </Button>
           </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Invoice Generation Modal */}
+      <Sheet open={showInvoiceModal} onOpenChange={setShowInvoiceModal}>
+        <SheetContent side="right" className="w-full sm:max-w-4xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Generate Invoice</SheetTitle>
+            <SheetDescription>
+              Preview and generate invoice for appointment
+            </SheetDescription>
+          </SheetHeader>
+
+          {selectedAppointmentForInvoice && (
+            <div className="space-y-6 mt-6">
+              {/* Invoice Preview */}
+              {getBranchByName(selectedAppointmentForInvoice.branch) && (
+                <div className="border rounded-lg overflow-hidden">
+                  <div id="invoice-container">
+                    {(() => {
+                      const TemplateComponent = getTemplate(
+                        getBranchByName(selectedAppointmentForInvoice.branch)?.invoiceTemplate || 'modern'
+                      );
+                      const invoiceData: InvoiceData = {
+                        id: selectedAppointmentForInvoice.id,
+                        invoiceNumber,
+                        customer: selectedAppointmentForInvoice.customer,
+                        email: selectedAppointmentForInvoice.email,
+                        phone: selectedAppointmentForInvoice.phone,
+                        service: selectedAppointmentForInvoice.service,
+                        date: selectedAppointmentForInvoice.date,
+                        time: selectedAppointmentForInvoice.time,
+                        duration: selectedAppointmentForInvoice.duration,
+                        price: selectedAppointmentForInvoice.price,
+                        status: selectedAppointmentForInvoice.status,
+                        barber: selectedAppointmentForInvoice.barber,
+                        notes: selectedAppointmentForInvoice.notes,
+                        tax: selectedAppointmentForInvoice.tax || 5,
+                        discount: selectedAppointmentForInvoice.discount || 0
+                      };
+
+                      return (
+                        <TemplateComponent
+                          invoice={invoiceData}
+                          branch={getBranchByName(selectedAppointmentForInvoice.branch)!}
+                        />
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-end pt-6 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowInvoiceModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    window.print();
+                    addNotification({
+                      type: 'success',
+                      title: 'Print Dialog Opened',
+                      message: 'Use your browser print function to save as PDF'
+                    });
+                  }}
+                  className="gap-2 bg-primary hover:bg-primary/90"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print / Save PDF
+                </Button>
+              </div>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </ProtectedRoute>

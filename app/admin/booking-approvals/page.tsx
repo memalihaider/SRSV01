@@ -54,9 +54,11 @@ export default function AdminBookingApprovals() {
   const [rescheduleDialog, setRescheduleDialog] = useState(false);
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showSuccessMsg, setShowSuccessMsg] = useState(false);
 
   // Mock appointments data with workflow states
-  const appointments = [
+  const initialAppointments = [
     {
       id: 1,
       customer: "John Doe",
@@ -164,8 +166,88 @@ export default function AdminBookingApprovals() {
       branch: "Downtown Premium",
       createdAt: "2025-12-01T10:30:00Z",
       updatedAt: "2025-12-01T14:00:00Z"
+    },
+    {
+      id: 7,
+      customer: "Eva Martinez",
+      service: "Luxury Facial Treatment",
+      barber: "Sarah Chen",
+      date: "2026-01-08",
+      time: "11:00 AM",
+      duration: "60 min",
+      price: 95,
+      status: "pending",
+      phone: "(555) 789-0123",
+      email: "eva.martinez@email.com",
+      notes: "Sensitive skin - use hypoallergenic products",
+      source: "website",
+      branch: "Marina Branch",
+      createdAt: "2026-01-06T16:00:00Z",
+      updatedAt: "2026-01-06T16:00:00Z"
+    },
+    {
+      id: 8,
+      customer: "Frank Turner",
+      service: "Executive Haircut & Massage",
+      barber: "Mike Johnson",
+      date: "2026-01-08",
+      time: "3:00 PM",
+      duration: "75 min",
+      price: 120,
+      status: "approved",
+      phone: "(555) 890-1234",
+      email: "frank.turner@email.com",
+      notes: "VIP customer - preferred scheduling",
+      source: "mobile",
+      branch: "JBR Beach Branch",
+      createdAt: "2026-01-05T10:00:00Z",
+      updatedAt: "2026-01-06T14:30:00Z"
+    },
+    {
+      id: 9,
+      customer: "Grace Kelly",
+      service: "Color Correction",
+      barber: "Sarah Chen",
+      date: "2026-01-09",
+      time: "9:00 AM",
+      duration: "120 min",
+      price: 180,
+      status: "pending",
+      phone: "(555) 901-2345",
+      email: "grace.kelly@email.com",
+      notes: "Complex color work - requires specialist",
+      source: "website",
+      branch: "Downtown Premium",
+      createdAt: "2026-01-07T09:30:00Z",
+      updatedAt: "2026-01-07T09:30:00Z"
+    },
+    {
+      id: 10,
+      customer: "Henry Foster",
+      service: "Beard Sculpting",
+      barber: "Alex Rodriguez",
+      date: "2026-01-09",
+      time: "2:30 PM",
+      duration: "40 min",
+      price: 65,
+      status: "in-progress",
+      phone: "(555) 012-3456",
+      email: "henry.foster@email.com",
+      notes: "Premium beard grooming package",
+      source: "mobile",
+      branch: "Marina Branch",
+      createdAt: "2026-01-07T14:00:00Z",
+      updatedAt: "2026-01-09T14:30:00Z"
     }
   ];
+
+  const [appointments, setAppointments] = useState(initialAppointments);
+
+  const showNotification = (message: string) => {
+    setSuccessMessage(message);
+    setShowSuccessMsg(true);
+    setTimeout(() => setShowSuccessMsg(false), 3000);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -200,37 +282,76 @@ export default function AdminBookingApprovals() {
   };
 
   const handleStatusChange = (appointmentId: number, newStatus: string) => {
-    // In a real app, this would make an API call
-    console.log(`Changing appointment ${appointmentId} status to ${newStatus}`);
-    // Update local state or refetch data
+    setAppointments(appointments.map(apt => 
+      apt.id === appointmentId 
+        ? { ...apt, status: newStatus, updatedAt: new Date().toISOString() }
+        : apt
+    ));
+    setSelectedAppointment(null);
+    
+    const statusMessages: { [key: string]: string } = {
+      'approved': '✓ Appointment approved successfully',
+      'in-progress': '▶ Service started',
+      'completed': '✓ Service completed',
+      'rejected': '✕ Appointment rejected',
+      'rescheduled': '↻ Appointment rescheduled'
+    };
+    
+    showNotification(statusMessages[newStatus] || 'Status updated');
   };
 
   const handleApprove = (appointmentId: number) => {
-    handleStatusChange(appointmentId, 'approved');
+    const appointment = appointments.find(a => a.id === appointmentId);
+    if (appointment) {
+      handleStatusChange(appointmentId, 'approved');
+    }
   };
 
   const handleStartService = (appointmentId: number) => {
-    handleStatusChange(appointmentId, 'in-progress');
+    const appointment = appointments.find(a => a.id === appointmentId);
+    if (appointment) {
+      handleStatusChange(appointmentId, 'in-progress');
+    }
   };
 
   const handleCompleteService = (appointmentId: number) => {
-    handleStatusChange(appointmentId, 'completed');
+    const appointment = appointments.find(a => a.id === appointmentId);
+    if (appointment) {
+      handleStatusChange(appointmentId, 'completed');
+    }
   };
 
   const handleReject = (appointmentId: number) => {
-    handleStatusChange(appointmentId, 'rejected');
+    const appointment = appointments.find(a => a.id === appointmentId);
+    if (appointment) {
+      handleStatusChange(appointmentId, 'rejected');
+    }
   };
 
   const handleReschedule = (appointmentId: number) => {
-    // Open reschedule dialog
-    setRescheduleDialog(true);
-    setSelectedAppointment(appointments.find(a => a.id === appointmentId));
+    const appointment = appointments.find(a => a.id === appointmentId);
+    if (appointment) {
+      setSelectedAppointment(appointment);
+      setRescheduleDialog(true);
+      setNewDate('');
+      setNewTime('');
+    }
   };
 
   const confirmReschedule = () => {
     if (selectedAppointment && newDate && newTime) {
-      // In a real app, this would make an API call
-      console.log(`Rescheduling appointment ${selectedAppointment.id} to ${newDate} ${newTime}`);
+      setAppointments(appointments.map(apt => 
+        apt.id === selectedAppointment.id 
+          ? { 
+              ...apt, 
+              date: newDate, 
+              time: newTime,
+              status: 'rescheduled',
+              updatedAt: new Date().toISOString() 
+            }
+          : apt
+      ));
+      showNotification('✓ Appointment rescheduled to ' + format(parseISO(newDate), 'MMM dd') + ' at ' + newTime);
       setRescheduleDialog(false);
       setNewDate('');
       setNewTime('');
@@ -245,6 +366,11 @@ export default function AdminBookingApprovals() {
     const matchesStatus = statusFilter === 'all' || appointment.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Fix: get status counts from filtered appointments
+  const getStatusCount = (status: string) => {
+    return appointments.filter(a => a.status === status).length;
+  };
 
   const getActionButtons = (appointment: any) => {
     switch (appointment.status) {
@@ -327,6 +453,14 @@ export default function AdminBookingApprovals() {
 
             <main className="p-4 lg:p-6">
               <div className="max-w-7xl mx-auto space-y-6">
+                {/* Success Notification */}
+                {showSuccessMsg && (
+                  <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-lg flex items-center gap-3 animate-pulse">
+                    <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                    <p className="text-green-800 font-medium">{successMessage}</p>
+                  </div>
+                )}
+
                 {/* Filters */}
                 <Card>
                   <CardContent className="pt-6">
@@ -397,50 +531,71 @@ export default function AdminBookingApprovals() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {filteredAppointments.map((appointment) => (
-                        <div
-                          key={appointment.id}
-                          className="border rounded-lg p-4"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <div className={`p-2 rounded-full ${getStatusColor(appointment.status).split(' ')[0]}`}>
-                                {getStatusIcon(appointment.status)}
-                              </div>
-                              <div>
-                                <h3 className="font-semibold">{appointment.customer}</h3>
-                                <p className="text-sm text-muted-foreground">{appointment.service}</p>
-                                <div className="flex items-center gap-4 mt-1">
-                                  <span className="text-sm flex items-center gap-1">
-                                    <User className="w-3 h-3" />
-                                    {appointment.barber}
-                                  </span>
-                                  <span className="text-sm flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    {format(parseISO(appointment.date), 'MMM dd')} at {appointment.time}
-                                  </span>
-                                  <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(appointment.status)}`}>
-                                    {appointment.status}
-                                  </span>
+                      {filteredAppointments.length === 0 ? (
+                        <div className="text-center py-12">
+                          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-500">No appointments found matching your search</p>
+                        </div>
+                      ) : (
+                        filteredAppointments.map((appointment) => (
+                          <div
+                            key={appointment.id}
+                            className="border-l-4 border-l-orange-500 rounded-lg p-4 hover:shadow-md transition-all bg-gradient-to-r from-white to-gray-50"
+                            style={{ borderLeftColor: 
+                              appointment.status === 'pending' ? '#f97316' :
+                              appointment.status === 'approved' ? '#a855f7' :
+                              appointment.status === 'in-progress' ? '#3b82f6' :
+                              appointment.status === 'completed' ? '#22c55e' :
+                              appointment.status === 'rejected' ? '#ef4444' :
+                              appointment.status === 'rescheduled' ? '#eab308' : '#6b7280'
+                            }}
+                          >
+                            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                              <div className="flex items-start gap-4 flex-1">
+                                <div className={`p-2 rounded-full flex-shrink-0 ${getStatusColor(appointment.status).split(' ')[0]}`}>
+                                  {getStatusIcon(appointment.status)}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h3 className="font-semibold text-lg">{appointment.customer}</h3>
+                                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(appointment.status)}`}>
+                                      {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-600 mt-1 font-medium">{appointment.service}</p>
+                                  <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-600">
+                                    <span className="flex items-center gap-1">
+                                      <User className="w-3 h-3" />
+                                      {appointment.barber}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" />
+                                      {format(parseISO(appointment.date), 'MMM dd, yyyy')} at {appointment.time}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      {getSourceIcon(appointment.source)}
+                                      {appointment.source === 'mobile' ? 'Mobile' : 'Website'}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {getActionButtons(appointment)}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedAppointment(appointment);
-                                  setShowAppointmentDetails(true);
-                                }}
-                              >
-                                View Details
-                              </Button>
+                              <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap">
+                                {getActionButtons(appointment)}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedAppointment(appointment);
+                                    setShowAppointmentDetails(true);
+                                  }}
+                                >
+                                  Details
+                                </Button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </CardContent>
                 </Card>

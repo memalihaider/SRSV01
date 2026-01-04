@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Poppins, Playfair_Display, Inconsolata } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
-const inter = Inter({
-  variable: "--font-inter",
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 const playfairDisplay = Playfair_Display({
@@ -14,9 +15,14 @@ const playfairDisplay = Playfair_Display({
   weight: ["400", "700"],
 });
 
+const inconsolata = Inconsolata({
+  variable: "--font-inconsolata",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "Barber Shop Management System",
-  description: "Premium barber shop booking and management system",
+  title: "Man of Cave Management System",
+  description: "Man of Cave booking and management system",
 };
 
 export default function RootLayout({
@@ -27,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} ${playfairDisplay.variable} antialiased`}
+        className={`${poppins.variable} ${inconsolata.variable} ${playfairDisplay.variable} antialiased font-sans`}
       >
         <Providers>
           {children}

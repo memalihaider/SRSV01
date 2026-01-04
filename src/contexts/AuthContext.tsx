@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Mock authentication - replace with real API call
     const mockUsers = [
       { email: 'admin@branch1.com', password: 'admin123', role: 'branch_admin' as const, branchId: '1' },
-      { email: 'super@premiumcuts.com', password: 'super123', role: 'super_admin' as const },
+      { email: 'super@manofcave.com', password: 'super123', role: 'super_admin' as const },
     ];
 
     const foundUser = mockUsers.find(u => u.email === email && u.password === password);

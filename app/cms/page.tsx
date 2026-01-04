@@ -25,11 +25,11 @@ export default function LandingPageCMS() {
 
   // Mock data for CMS content
   const heroSection = {
-    title: "Premium Cuts",
+    title: "Man of Cave",
     subtitle: "Experience luxury grooming at our 8 locations across the city",
     ctaPrimary: "Book Now",
     ctaSecondary: "Find Location",
-    backgroundImage: "/api/placeholder/1920/1080",
+    backgroundImage: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=2070&auto=format&fit=crop",
   };
 
   const testimonials = [
@@ -45,9 +45,9 @@ export default function LandingPageCMS() {
   ];
 
   const seoSettings = {
-    metaTitle: "Premium Cuts - Luxury Barber Shop | Book Online",
-    metaDescription: "Experience premium grooming services at Premium Cuts. Professional barbers, luxury atmosphere, 8 locations across the city.",
-    keywords: "barber, haircuts, beard grooming, luxury salon, premium cuts",
+    metaTitle: "Man of Cave - Luxury Grooming | Book Online",
+    metaDescription: "Experience luxury grooming services at Man of Cave. Professional barbers, luxury atmosphere, 8 locations across the city.",
+    keywords: "barber, haircuts, beard grooming, luxury salon, man of cave",
   };
 
   return (
